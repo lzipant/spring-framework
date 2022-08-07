@@ -87,8 +87,8 @@ public class AllEncompassingFormHttpMessageConverter extends FormHttpMessageConv
 			}
 		}
 
-		if (jackson2Present) {
-			addPartConverter(new MappingJackson2HttpMessageConverter());
+		if (jackson2Present) { // Jackson相关的消息转换器
+			addPartConverter(new MappingJackson2HttpMessageConverter()); // 注意调用的是无参构造器
 		}
 		else if (gsonPresent) {
 			addPartConverter(new GsonHttpMessageConverter());

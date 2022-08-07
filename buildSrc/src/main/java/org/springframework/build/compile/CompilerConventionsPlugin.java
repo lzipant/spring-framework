@@ -16,16 +16,18 @@
 
 package org.springframework.build.compile;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.file.DuplicatesStrategy;
 import org.gradle.api.plugins.JavaLibraryPlugin;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginConvention;
+import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.api.tasks.compile.JavaCompile;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * {@link Plugin} that applies conventions for compiling Java sources in Spring Framework.
@@ -51,7 +53,7 @@ public class CompilerConventionsPlugin implements Plugin<Project> {
 		COMPILER_ARGS.addAll(commonCompilerArgs);
 		COMPILER_ARGS.addAll(Arrays.asList(
 				"-Xlint:varargs", "-Xlint:fallthrough", "-Xlint:rawtypes", "-Xlint:deprecation",
-				"-Xlint:unchecked", "-Werror"
+				"-Xlint:unchecked"/*, "-Werror"*/
 		));
 		TEST_COMPILER_ARGS = new ArrayList<>();
 		TEST_COMPILER_ARGS.addAll(commonCompilerArgs);
@@ -84,6 +86,9 @@ public class CompilerConventionsPlugin implements Plugin<Project> {
 					compileTask.getOptions().setCompilerArgs(TEST_COMPILER_ARGS);
 					compileTask.getOptions().setEncoding("UTF-8");
 				});
+
+		// 避免报类似错误：Entry META-INF/spring-core.kotlin_module is a duplicate but no duplicate handling strategy has been set
+		project.getTasks().withType(Jar.class).configureEach(copy -> copy.setDuplicatesStrategy(DuplicatesStrategy.EXCLUDE));
 	}
 
 }

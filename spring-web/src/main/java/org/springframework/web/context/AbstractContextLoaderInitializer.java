@@ -16,15 +16,14 @@
 
 package org.springframework.web.context;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.lang.Nullable;
 import org.springframework.web.WebApplicationInitializer;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 
 /**
  * Convenient base class for {@link WebApplicationInitializer} implementations
@@ -59,9 +58,9 @@ public abstract class AbstractContextLoaderInitializer implements WebApplication
 	protected void registerContextLoaderListener(ServletContext servletContext) {
 		WebApplicationContext rootAppContext = createRootApplicationContext();
 		if (rootAppContext != null) {
-			ContextLoaderListener listener = new ContextLoaderListener(rootAppContext);
-			listener.setContextInitializers(getRootApplicationContextInitializers());
-			servletContext.addListener(listener);
+			ContextLoaderListener listener = new ContextLoaderListener(rootAppContext); // 用容器作为参数实例化listener
+			listener.setContextInitializers(getRootApplicationContextInitializers()); // 这里其实set的是null
+			servletContext.addListener(listener); // 注册listener，servlet容器会在相应时刻进行相应处理
 		}
 		else {
 			logger.debug("No ContextLoaderListener registered, as " +

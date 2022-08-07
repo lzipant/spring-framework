@@ -16,18 +16,8 @@
 
 package org.springframework.web.context;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.servlet.ServletContext;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextException;
@@ -42,6 +32,14 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+
+import javax.servlet.ServletContext;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Performs the actual initialization work for the root application context.
@@ -140,6 +138,7 @@ public class ContextLoader {
 		// This is currently strictly internal and not meant to be customized
 		// by application developers.
 		try {
+			// 加载默认的属性文件
 			ClassPathResource resource = new ClassPathResource(DEFAULT_STRATEGIES_PATH, ContextLoader.class);
 			defaultStrategies = PropertiesLoaderUtils.loadProperties(resource);
 		}
@@ -259,6 +258,7 @@ public class ContextLoader {
 	 * @see #CONFIG_LOCATION_PARAM
 	 */
 	public WebApplicationContext initWebApplicationContext(ServletContext servletContext) {
+		// 先检查是否重复加载了容器
 		if (servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE) != null) {
 			throw new IllegalStateException(
 					"Cannot initialize context because there is already a root application context present - " +
@@ -275,11 +275,15 @@ public class ContextLoader {
 		try {
 			// Store context in local instance variable, to guarantee that
 			// it is available on ServletContext shutdown.
+			/*
+			 * 一般基于web.xml配置的，这里都是null；而通过注解配置的，这里都不是null
+			 */
 			if (this.context == null) {
 				this.context = createWebApplicationContext(servletContext);
 			}
 			if (this.context instanceof ConfigurableWebApplicationContext) {
 				ConfigurableWebApplicationContext cwac = (ConfigurableWebApplicationContext) this.context;
+				// 一般刚创建的容器还没被激活，所以这里为false，后续prepareRefresh后，会设置active为true
 				if (!cwac.isActive()) {
 					// The context has not yet been refreshed -> provide services such as
 					// setting the parent context, setting the application context id, etc
@@ -289,11 +293,17 @@ public class ContextLoader {
 						ApplicationContext parent = loadParentContext(servletContext);
 						cwac.setParent(parent);
 					}
+
+					/*
+					 * 重要方法：封装了对容器的设置操作及refresh操作，其中refresh操作特别重要，是整个Spring容器的核心
+					 */
 					configureAndRefreshWebApplicationContext(cwac, servletContext);
 				}
 			}
+			// 将spring的ROOT容器注册到Servlet容器中，避免重复初始化，同时也可以在其他地方根据ServletContext获取到ROOT容器
 			servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this.context);
 
+			// 将spring容器与线程相关联
 			ClassLoader ccl = Thread.currentThread().getContextClassLoader();
 			if (ccl == ContextLoader.class.getClassLoader()) {
 				currentContext = this.context;
@@ -304,7 +314,7 @@ public class ContextLoader {
 
 			if (logger.isInfoEnabled()) {
 				long elapsedTime = System.currentTimeMillis() - startTime;
-				logger.info("Root WebApplicationContext initialized in " + elapsedTime + " ms");
+				logger.info("Root WebApplicationContext initialized in " + elapsedTime + " ms"); // 打印日志，表示Spring根容器已经初始化完成
 			}
 
 			return this.context;
@@ -330,6 +340,7 @@ public class ContextLoader {
 	 */
 	protected WebApplicationContext createWebApplicationContext(ServletContext sc) {
 		Class<?> contextClass = determineContextClass(sc);
+		// 必须是ConfigurableWebApplicationContext的子类才行
 		if (!ConfigurableWebApplicationContext.class.isAssignableFrom(contextClass)) {
 			throw new ApplicationContextException("Custom context class [" + contextClass.getName() +
 					"] is not of type [" + ConfigurableWebApplicationContext.class.getName() + "]");
@@ -346,8 +357,8 @@ public class ContextLoader {
 	 * @see org.springframework.web.context.support.XmlWebApplicationContext
 	 */
 	protected Class<?> determineContextClass(ServletContext servletContext) {
-		String contextClassName = servletContext.getInitParameter(CONTEXT_CLASS_PARAM);
-		if (contextClassName != null) {
+		String contextClassName = servletContext.getInitParameter(CONTEXT_CLASS_PARAM); // 获取servlet中名为contextClass的属性
+		if (contextClassName != null) { // 一般不会在web.xml中配置该属性，所以这里大多数时候都是null
 			try {
 				return ClassUtils.forName(contextClassName, ClassUtils.getDefaultClassLoader());
 			}
@@ -357,6 +368,7 @@ public class ContextLoader {
 			}
 		}
 		else {
+			// 获取默认的容器类名，默认是XmlWebApplicationContext
 			contextClassName = defaultStrategies.getProperty(WebApplicationContext.class.getName());
 			try {
 				return ClassUtils.forName(contextClassName, ContextLoader.class.getClassLoader());
@@ -369,6 +381,8 @@ public class ContextLoader {
 	}
 
 	protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicationContext wac, ServletContext sc) {
+
+		// 处理容器的ID
 		if (ObjectUtils.identityToString(wac).equals(wac.getId())) {
 			// The application context id is still set to its original default value
 			// -> assign a more useful id based on available information
@@ -383,21 +397,28 @@ public class ContextLoader {
 			}
 		}
 
-		wac.setServletContext(sc);
-		String configLocationParam = sc.getInitParameter(CONFIG_LOCATION_PARAM);
+		wac.setServletContext(sc); // spring容器关联servlet上下文
+		String configLocationParam = sc.getInitParameter(CONFIG_LOCATION_PARAM); // 从servlet上下文中获取名为“contextConfigLocation”的参数
 		if (configLocationParam != null) {
-			wac.setConfigLocation(configLocationParam);
+			wac.setConfigLocation(configLocationParam); // 设置容器配置文件地址
 		}
 
 		// The wac environment's #initPropertySources will be called in any case when the context
 		// is refreshed; do it eagerly here to ensure servlet property sources are in place for
 		// use in any post-processing or initialization that occurs below prior to #refresh
+		/*
+		 * getEnvironment的时候会判断是否已经创建过Environment对象，如果没有，则新创建，是StandardServletEnvironment类型的(注意AbstractApplicationContext的子类会重写getEnvironment方法)。
+		 * 注意，容器在setConfigLocation的时候调用resolvePath的时候也会调用getEnvironment
+		 *
+		 */
 		ConfigurableEnvironment env = wac.getEnvironment();
 		if (env instanceof ConfigurableWebEnvironment) {
 			((ConfigurableWebEnvironment) env).initPropertySources(sc, null);
 		}
 
-		customizeContext(sc, wac);
+		customizeContext(sc, wac); // 不太重要，暂时可以忽略
+
+		// Spring容器的核心方法，包含了极其复杂的逻辑
 		wac.refresh();
 	}
 

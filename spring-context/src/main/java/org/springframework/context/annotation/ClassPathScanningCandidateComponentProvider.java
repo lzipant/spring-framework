@@ -16,18 +16,8 @@
 
 package org.springframework.context.annotation;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.annotation.Lookup;
@@ -53,13 +43,14 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Controller;
-import org.springframework.stereotype.Indexed;
-import org.springframework.stereotype.Repository;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.*;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.util.*;
 
 /**
  * A component provider that provides candidate components from a base package. Can
@@ -94,9 +85,9 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 
 	private String resourcePattern = DEFAULT_RESOURCE_PATTERN;
 
-	private final List<TypeFilter> includeFilters = new ArrayList<>();
+	private final List<TypeFilter> includeFilters = new ArrayList<>(); // 包含过滤规则
 
-	private final List<TypeFilter> excludeFilters = new ArrayList<>();
+	private final List<TypeFilter> excludeFilters = new ArrayList<>(); // 排除过滤规则
 
 	@Nullable
 	private Environment environment;
@@ -204,8 +195,11 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 */
 	@SuppressWarnings("unchecked")
 	protected void registerDefaultFilters() {
+		// 默认添加了对@Component的include支持
 		this.includeFilters.add(new AnnotationTypeFilter(Component.class));
 		ClassLoader cl = ClassPathScanningCandidateComponentProvider.class.getClassLoader();
+
+		// 兼容JSR-250的@ManagedBean
 		try {
 			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("javax.annotation.ManagedBean", cl)), false));
@@ -214,6 +208,8 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		catch (ClassNotFoundException ex) {
 			// JSR-250 1.1 API (as included in Java EE 6) not available - simply skip.
 		}
+
+		// 兼容JSR-250的@Named
 		try {
 			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("javax.inject.Named", cl)), false));
@@ -264,6 +260,10 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	public void setResourceLoader(@Nullable ResourceLoader resourceLoader) {
 		this.resourcePatternResolver = ResourcePatternUtils.getResourcePatternResolver(resourceLoader);
 		this.metadataReaderFactory = new CachingMetadataReaderFactory(resourceLoader);
+		/*
+		 * Spring5才引入的，优化了bean的扫描，但需引入spring-context-indexer这个包;
+		 * 具体是通过编译器完成扫描，并且往本地写索引，然后启动的时候再去扫描索引即可的思路
+		 */
 		this.componentsIndex = CandidateComponentsIndexLoader.loadIndex(this.resourcePatternResolver.getClassLoader());
 	}
 
@@ -309,10 +309,10 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * @return a corresponding Set of autodetected bean definitions
 	 */
 	public Set<BeanDefinition> findCandidateComponents(String basePackage) {
-		if (this.componentsIndex != null && indexSupportsIncludeFilters()) {
+		if (this.componentsIndex != null && indexSupportsIncludeFilters()) { // Spring5新增的一种扫描方式，用了索引，启动速度快，适合大型项目
 			return addCandidateComponentsFromIndex(this.componentsIndex, basePackage);
 		}
-		else {
+		else { // 普通扫描方式
 			return scanCandidateComponents(basePackage);
 		}
 	}
@@ -416,20 +416,41 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	private Set<BeanDefinition> scanCandidateComponents(String basePackage) {
 		Set<BeanDefinition> candidates = new LinkedHashSet<>();
 		try {
+			/*
+			 * 根据包名生成扫描路径：
+			 * 其实包名中可以存在spEL表达式，resolveBasePackage会处理
+			 *
+			 */
+			// 解析后的路径形如：net.lzip.ant ----> classpath*:net/lzip/ant/**/*.class
 			String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
 					resolveBasePackage(basePackage) + '/' + this.resourcePattern;
+			// 会根据扫描路径获取到包下所有.class文件，并以resource对象来表示
 			Resource[] resources = getResourcePatternResolver().getResources(packageSearchPath);
 			boolean traceEnabled = logger.isTraceEnabled();
 			boolean debugEnabled = logger.isDebugEnabled();
+
+			// 遍历所有的resource对象
 			for (Resource resource : resources) {
 				if (traceEnabled) {
 					logger.trace("Scanning " + resource);
 				}
 				try {
+					// 读取类的注解信息和类信息，并封装在MetadataReader中
 					MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
+					/*
+					 * 这里isCandidateComponent的逻辑是：
+					 * 		先用excludeFilter去匹配，如果匹配上了，会返回false；否则继续执行
+					 * 		再用includeFilter去匹配，如果匹配上了，会返回true；否则会返回false
+					 */
 					if (isCandidateComponent(metadataReader)) {
+
+						// 将候选组件转换为beanDefinition
 						ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 						sbd.setSource(resource);
+						/*
+						 * 再次判断。注意，这里的isCandidateComponent是上面那个的重载方法
+						 * 会处理抽象类和@Lookup注解
+						 */
 						if (isCandidateComponent(sbd)) {
 							if (debugEnabled) {
 								logger.debug("Identified candidate component class: " + resource);

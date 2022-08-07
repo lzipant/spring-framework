@@ -16,29 +16,21 @@
 
 package org.springframework.core;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Executable;
-import java.lang.reflect.Member;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Predicate;
-
 import kotlin.Unit;
 import kotlin.reflect.KFunction;
 import kotlin.reflect.KParameter;
 import kotlin.reflect.jvm.ReflectJvmMapping;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * Helper class that encapsulates the specification of a method parameter, i.e. a {@link Method}
@@ -60,41 +52,93 @@ import org.springframework.util.ObjectUtils;
  */
 public class MethodParameter {
 
+	/*
+	 * 空注解数组常量，主要起"标记"作用，避免每次都创建新的空数组对象
+	 *
+	 */
 	private static final Annotation[] EMPTY_ANNOTATION_ARRAY = new Annotation[0];
 
 
+	/*
+	 * 参数所在的method或constructor对象
+	 * 这里的Executable类型是java.lang.reflect包下的，是java.lang.reflect.Method和java.lang.reflect.Constructor的父类
+	 *
+	 */
 	private final Executable executable;
 
+	/*
+	 * 当前参数在参数列表中的索引（从0开始）
+	 *
+	 */
 	private final int parameterIndex;
 
+	/*
+	 * 参数对象本体
+	 *
+	 */
 	@Nullable
 	private volatile Parameter parameter;
 
+	/*
+	 * 嵌套级别
+	 * ？
+	 */
 	private int nestingLevel;
 
+	/*
+	 * ？
+	 */
 	/** Map from Integer level to Integer type index. */
 	@Nullable
 	Map<Integer, Integer> typeIndexesPerLevel;
 
+	/*
+	 * 当前参数所在的类
+	 *
+	 */
 	/** The containing class. Could also be supplied by overriding {@link #getContainingClass()} */
 	@Nullable
 	private volatile Class<?> containingClass;
 
+	/*
+	 * 参数的类型
+	 *
+	 */
 	@Nullable
 	private volatile Class<?> parameterType;
 
+	/*
+	 * 泛型参数类型
+	 * ？
+	 */
 	@Nullable
 	private volatile Type genericParameterType;
 
+	/*
+	 * 修饰当前参数的注解
+	 *
+	 */
 	@Nullable
 	private volatile Annotation[] parameterAnnotations;
 
+	/*
+	 * 该参数的参数名解析器
+	 *
+	 */
 	@Nullable
 	private volatile ParameterNameDiscoverer parameterNameDiscoverer;
 
+	/*
+	 * 参数名称
+	 *
+	 */
 	@Nullable
 	private volatile String parameterName;
 
+	/*
+	 * ？
+	 *
+	 */
 	@Nullable
 	private volatile MethodParameter nestedMethodParameter;
 
@@ -708,10 +752,10 @@ public class MethodParameter {
 		ParameterNameDiscoverer discoverer = this.parameterNameDiscoverer;
 		if (discoverer != null) {
 			String[] parameterNames = null;
-			if (this.executable instanceof Method) {
+			if (this.executable instanceof Method) { // 如果是普通方法
 				parameterNames = discoverer.getParameterNames((Method) this.executable);
 			}
-			else if (this.executable instanceof Constructor) {
+			else if (this.executable instanceof Constructor) { // 如果是构造器
 				parameterNames = discoverer.getParameterNames((Constructor<?>) this.executable);
 			}
 			if (parameterNames != null) {

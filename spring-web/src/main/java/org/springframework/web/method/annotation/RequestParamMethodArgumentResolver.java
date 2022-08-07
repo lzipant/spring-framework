@@ -16,15 +16,6 @@
 
 package org.springframework.web.method.annotation;
 
-import java.beans.PropertyEditor;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.Part;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.core.MethodParameter;
@@ -48,6 +39,14 @@ import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.multipart.support.MultipartResolutionDelegate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.Part;
+import java.beans.PropertyEditor;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Resolves method arguments annotated with @{@link RequestParam}, arguments of
@@ -126,6 +125,7 @@ public class RequestParamMethodArgumentResolver extends AbstractNamedValueMethod
 	@Override
 	public boolean supportsParameter(MethodParameter parameter) {
 		if (parameter.hasParameterAnnotation(RequestParam.class)) {
+			// 如果参数类型是Map及其子类型，那么@RequestParam必须存在name属性
 			if (Map.class.isAssignableFrom(parameter.nestedIfOptional().getNestedParameterType())) {
 				RequestParam requestParam = parameter.getParameterAnnotation(RequestParam.class);
 				return (requestParam != null && StringUtils.hasText(requestParam.name()));
@@ -142,7 +142,8 @@ public class RequestParamMethodArgumentResolver extends AbstractNamedValueMethod
 			if (MultipartResolutionDelegate.isMultipartArgument(parameter)) {
 				return true;
 			}
-			else if (this.useDefaultResolution) {
+			else if (this.useDefaultResolution) { // 如果使用默认解析
+				// 默认解析模式下，支持对简单类型的解析，什么是简单类型，请参考BeanUtils.isSimpleProperty
 				return BeanUtils.isSimpleProperty(parameter.getNestedParameterType());
 			}
 			else {
@@ -154,16 +155,35 @@ public class RequestParamMethodArgumentResolver extends AbstractNamedValueMethod
 	@Override
 	protected NamedValueInfo createNamedValueInfo(MethodParameter parameter) {
 		RequestParam ann = parameter.getParameterAnnotation(RequestParam.class);
+		/*
+		 * 如果参数存在@RequestParam注解，那么会根据注解中的内容来创建NamedValueInfo
+		 * 否则，创建参数名是空串、非必须，默认空值的NamedValueInfo
+		 */
 		return (ann != null ? new RequestParamNamedValueInfo(ann) : new RequestParamNamedValueInfo());
 	}
 
 	@Override
 	@Nullable
 	protected Object resolveName(String name, MethodParameter parameter, NativeWebRequest request) throws Exception {
+		/*
+		 * 这里要注意，如果请求中携带了文件，那么请求会在DispatcherServlet中的checkMultipart方法内调用multipartResolver的resolveMultipart方法，
+		 * 该方法会封装HttpServletRequest， 将其转为其他类型的请求对象
+		 * 但注意，就目前而言，使用到的那几种multipartResolver而言，都是使用MultipartHttpServletRequest的子类型，
+		 *
+		 */
 		HttpServletRequest servletRequest = request.getNativeRequest(HttpServletRequest.class);
 
 		if (servletRequest != null) {
 			Object mpArg = MultipartResolutionDelegate.resolveMultipartArgument(name, parameter, servletRequest);
+			/*
+			 * mpArg的情况分析：
+			 * 	* 参数符合MultipartFile参数的接收形式：
+			 * 	*	请求是multipart类型：那么mpArg就是相应包含MultipartFile的相应形式的值
+			 *  *	请求不是multipart类型：返回null
+			 *  * 不符合MultipartFile参数的接收形式（如其他普通参数）：
+			 * 	*	返回MultipartResolutionDelegate.UNRESOLVABLE
+			 *
+			 */
 			if (mpArg != MultipartResolutionDelegate.UNRESOLVABLE) {
 				return mpArg;
 			}
@@ -177,6 +197,7 @@ public class RequestParamMethodArgumentResolver extends AbstractNamedValueMethod
 				arg = (files.size() == 1 ? files.get(0) : files);
 			}
 		}
+		// 如果arg还是null，那么说明是非文件参数
 		if (arg == null) {
 			String[] paramValues = request.getParameterValues(name);
 			if (paramValues != null) {

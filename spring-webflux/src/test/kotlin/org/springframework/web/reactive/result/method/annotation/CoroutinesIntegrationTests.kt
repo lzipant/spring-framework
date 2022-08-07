@@ -16,10 +16,7 @@
 
 package org.springframework.web.reactive.result.method.annotation
 
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.assertj.core.api.Assertions.assertThat
@@ -41,6 +38,7 @@ import org.springframework.web.testfixture.http.server.reactive.bootstrap.Undert
 import reactor.core.publisher.Flux
 import java.time.Duration
 
+@DelicateCoroutinesApi
 class CoroutinesIntegrationTests : AbstractRequestMappingIntegrationTests() {
 
 	override fun initApplicationContext(): ApplicationContext {

@@ -16,13 +16,10 @@
 
 package org.springframework.core
 
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.reactivestreams.Publisher
@@ -32,6 +29,7 @@ import reactor.test.StepVerifier
 import java.time.Duration
 import kotlin.reflect.KClass
 
+@DelicateCoroutinesApi
 class KotlinReactiveAdapterRegistryTests {
 
 	private val registry = ReactiveAdapterRegistry.getSharedInstance()

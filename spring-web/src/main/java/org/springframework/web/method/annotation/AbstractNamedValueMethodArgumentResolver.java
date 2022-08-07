@@ -16,11 +16,6 @@
 
 package org.springframework.web.method.annotation;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.servlet.ServletException;
-
 import org.springframework.beans.ConversionNotSupportedException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.beans.factory.config.BeanExpressionContext;
@@ -36,6 +31,10 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.RequestScope;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
+
+import javax.servlet.ServletException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Abstract base class for resolving method arguments from a named value.
@@ -96,26 +95,31 @@ public abstract class AbstractNamedValueMethodArgumentResolver implements Handle
 	public final Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
 
-		NamedValueInfo namedValueInfo = getNamedValueInfo(parameter);
-		MethodParameter nestedParameter = parameter.nestedIfOptional();
+		NamedValueInfo namedValueInfo = getNamedValueInfo(parameter); // NamedValueInfo是当前类的内部类
+		MethodParameter nestedParameter = parameter.nestedIfOptional(); // 对optional类型的参数做处理
 
+		// 这个name可能来自于注解属性，而注解属性值可能是spring的表达式引用的其他属性，所以要解析一下
 		Object resolvedName = resolveEmbeddedValuesAndExpressions(namedValueInfo.name);
 		if (resolvedName == null) {
 			throw new IllegalArgumentException(
 					"Specified name must not resolve to null: [" + namedValueInfo.name + "]");
 		}
 
-		Object arg = resolveName(resolvedName.toString(), nestedParameter, webRequest);
+		Object arg = resolveName(resolvedName.toString(), nestedParameter, webRequest); // 交给子类来实现
 		if (arg == null) {
 			if (namedValueInfo.defaultValue != null) {
+				// 处理默认值，和resolvedName一样，可能是spring表达式，所以需要解析一下
 				arg = resolveEmbeddedValuesAndExpressions(namedValueInfo.defaultValue);
 			}
 			else if (namedValueInfo.required && !nestedParameter.isOptional()) {
+				// 参数是required的且参数又不是optional的，但是没有对应的参数，该方法内一定会抛出异常，所以后面的代码不会被执行到
 				handleMissingValue(namedValueInfo.name, nestedParameter, webRequest);
 			}
+			// 处理一下null值的情况，如果参数类型是Boolean，那么设置为false；如果是其他基本类型，抛出异常，因为null不能赋值给基本类型
 			arg = handleNullValue(namedValueInfo.name, arg, nestedParameter.getNestedParameterType());
 		}
 		else if ("".equals(arg) && namedValueInfo.defaultValue != null) {
+			// 如果参数值是空串且存在默认值，那么也会对默认值进行处理，然后作为参数值
 			arg = resolveEmbeddedValuesAndExpressions(namedValueInfo.defaultValue);
 		}
 
@@ -150,8 +154,8 @@ public abstract class AbstractNamedValueMethodArgumentResolver implements Handle
 	private NamedValueInfo getNamedValueInfo(MethodParameter parameter) {
 		NamedValueInfo namedValueInfo = this.namedValueInfoCache.get(parameter);
 		if (namedValueInfo == null) {
-			namedValueInfo = createNamedValueInfo(parameter);
-			namedValueInfo = updateNamedValueInfo(parameter, namedValueInfo);
+			namedValueInfo = createNamedValueInfo(parameter); // 创建NamedValueInfo
+			namedValueInfo = updateNamedValueInfo(parameter, namedValueInfo); // 更新NamedValueInfo对象的属性
 			this.namedValueInfoCache.put(parameter, namedValueInfo);
 		}
 		return namedValueInfo;
@@ -170,8 +174,8 @@ public abstract class AbstractNamedValueMethodArgumentResolver implements Handle
 	 */
 	private NamedValueInfo updateNamedValueInfo(MethodParameter parameter, NamedValueInfo info) {
 		String name = info.name;
-		if (info.name.isEmpty()) {
-			name = parameter.getParameterName();
+		if (info.name.isEmpty()) { // 如果参数名还为空
+			name = parameter.getParameterName(); // 尝试通过参数名称发现器来获取参数名
 			if (name == null) {
 				throw new IllegalArgumentException(
 						"Name for argument of type [" + parameter.getNestedParameterType().getName() +

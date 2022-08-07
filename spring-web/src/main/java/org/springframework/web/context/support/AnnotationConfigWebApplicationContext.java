@@ -16,22 +16,18 @@
 
 package org.springframework.web.context.support;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 import org.springframework.beans.factory.support.BeanNameGenerator;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.context.annotation.AnnotatedBeanDefinitionReader;
-import org.springframework.context.annotation.AnnotationConfigRegistry;
-import org.springframework.context.annotation.AnnotationConfigUtils;
-import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
-import org.springframework.context.annotation.ScopeMetadataResolver;
+import org.springframework.context.annotation.*;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.ContextLoader;
+
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * {@link org.springframework.web.context.WebApplicationContext WebApplicationContext}
@@ -212,6 +208,7 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 		AnnotatedBeanDefinitionReader reader = getAnnotatedBeanDefinitionReader(beanFactory);
 		ClassPathBeanDefinitionScanner scanner = getClassPathBeanDefinitionScanner(beanFactory);
 
+		// 生成bean的名称生成器，并加入到容器中
 		BeanNameGenerator beanNameGenerator = getBeanNameGenerator();
 		if (beanNameGenerator != null) {
 			reader.setBeanNameGenerator(beanNameGenerator);
@@ -219,18 +216,25 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 			beanFactory.registerSingleton(AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR, beanNameGenerator);
 		}
 
+		// 生成bean作用域解析器
 		ScopeMetadataResolver scopeMetadataResolver = getScopeMetadataResolver();
 		if (scopeMetadataResolver != null) {
 			reader.setScopeMetadataResolver(scopeMetadataResolver);
 			scanner.setScopeMetadataResolver(scopeMetadataResolver);
 		}
 
+		/*
+		 * 这里componentClasses有可能就是@ComponentScan中的basePackageClasses，
+		 * basePackages就是@ComponentScan中的basePackages，可见两个是互补的
+		 *
+		 */
+
 		if (!this.componentClasses.isEmpty()) {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Registering component classes: [" +
 						StringUtils.collectionToCommaDelimitedString(this.componentClasses) + "]");
 			}
-			reader.register(ClassUtils.toClassArray(this.componentClasses));
+			reader.register(ClassUtils.toClassArray(this.componentClasses)); // 注册一些显式指定的bean，并生成beanDefinition
 		}
 
 		if (!this.basePackages.isEmpty()) {
@@ -238,10 +242,10 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 				logger.debug("Scanning base packages: [" +
 						StringUtils.collectionToCommaDelimitedString(this.basePackages) + "]");
 			}
-			scanner.scan(StringUtils.toStringArray(this.basePackages));
+			scanner.scan(StringUtils.toStringArray(this.basePackages)); // 通过扫描器来扫描bean并生成beanDefinition
 		}
 
-		String[] configLocations = getConfigLocations();
+		String[] configLocations = getConfigLocations(); // 全类名解析？这部分不是很熟悉，不知道是怎么使用的
 		if (configLocations != null) {
 			for (String configLocation : configLocations) {
 				try {
@@ -249,7 +253,7 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 					if (logger.isTraceEnabled()) {
 						logger.trace("Registering [" + configLocation + "]");
 					}
-					reader.register(clazz);
+					reader.register(clazz); // 直接生成beanDefinition并注册
 				}
 				catch (ClassNotFoundException ex) {
 					if (logger.isTraceEnabled()) {

@@ -16,15 +16,15 @@
 
 package org.springframework.http.converter;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.lang.reflect.Type;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.MediaType;
 import org.springframework.http.StreamingHttpOutputMessage;
 import org.springframework.lang.Nullable;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.reflect.Type;
 
 /**
  * Abstract base class for most {@link GenericHttpMessageConverter} implementations.
@@ -68,6 +68,10 @@ public abstract class AbstractGenericHttpMessageConverter<T> extends AbstractHtt
 
 	@Override
 	public boolean canRead(Type type, @Nullable Class<?> contextClass, @Nullable MediaType mediaType) {
+		/*
+			感觉这里的instanceof判断是多余的，因为后面那两个canRead最后都是一样的，因为第一个canRead内部调用了上面的support，
+			而上面那个方法始终返回true，然后还是调的第二个canRead那个方法
+		 */
 		return (type instanceof Class ? canRead((Class<?>) type, mediaType) : canRead(mediaType));
 	}
 

@@ -16,6 +16,11 @@
 
 package org.springframework.http.converter;
 
+import org.apache.commons.logging.Log;
+import org.springframework.http.*;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
@@ -23,17 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpInputMessage;
-import org.springframework.http.HttpLogging;
-import org.springframework.http.HttpOutputMessage;
-import org.springframework.http.MediaType;
-import org.springframework.http.StreamingHttpOutputMessage;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 
 /**
  * Abstract base class for most {@link HttpMessageConverter} implementations.
@@ -133,7 +127,7 @@ public abstract class AbstractHttpMessageConverter<T> implements HttpMessageConv
 	 */
 	@Override
 	public boolean canRead(Class<?> clazz, @Nullable MediaType mediaType) {
-		return supports(clazz) && canRead(mediaType);
+		return supports(clazz) && canRead(mediaType); // 对于通用解析器而言，supports始终返回true，只需关注后面的canRead(下面那个方法)
 	}
 
 	/**
@@ -150,7 +144,7 @@ public abstract class AbstractHttpMessageConverter<T> implements HttpMessageConv
 			return true;
 		}
 		for (MediaType supportedMediaType : getSupportedMediaTypes()) {
-			if (supportedMediaType.includes(mediaType)) {
+			if (supportedMediaType.includes(mediaType)) { // 这里includes会判断是否当前媒体类型是否包含目标媒体类型，如application/*json肯定包含application/json
 				return true;
 			}
 		}

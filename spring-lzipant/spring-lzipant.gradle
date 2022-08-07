@@ -1,0 +1,43 @@
+plugins {
+    id 'java'
+    id 'war'
+}
+
+group 'net.lzip.ant'
+version '5.3.22-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    optional(project(":spring-webmvc"))
+    optional("javax.servlet:javax.servlet-api")
+    optional(project(":spring-jdbc"))
+    optional(project(":spring-aspects"))
+
+    // https://mvnrepository.com/artifact/mysql/mysql-connector-java
+    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.29'
+    // https://mvnrepository.com/artifact/com.baomidou/mybatis-plus
+    implementation group: 'com.baomidou', name: 'mybatis-plus', version: '3.5.2'
+    // https://mvnrepository.com/artifact/com.baomidou/mybatis-plus-generator
+    implementation group: 'com.baomidou', name: 'mybatis-plus-generator', version: '3.5.2'
+    // https://mvnrepository.com/artifact/org.apache.velocity/velocity-engine-core
+    implementation group: 'org.apache.velocity', name: 'velocity-engine-core', version: '2.3'
+
+    // https://mvnrepository.com/artifact/com.zaxxer/HikariCP
+    implementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
+    // https://mvnrepository.com/artifact/org.projectlombok/lombok
+    compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.24'
+
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.13.3'
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.13.3'
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jsr310
+    implementation group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: '2.13.3'
+
+    optional("commons-fileupload:commons-fileupload")
+}
+test {
+    useJUnitPlatform()
+}

@@ -33,6 +33,9 @@ public interface ValueConstants {
 	 * @see RequestHeader#defaultValue()
 	 * @see CookieValue#defaultValue()
 	 */
+	/*
+	 * 因为Java注解中的属性值只能是常量，也就是说不能用null，所以该变量可以用来表示默认空值，该值不会和用户输入的内容相匹配
+	 */
 	String DEFAULT_NONE = "\n\t\t\n\t\t\n\uE000\uE001\uE002\n\t\t\t\t\n";
 
 }

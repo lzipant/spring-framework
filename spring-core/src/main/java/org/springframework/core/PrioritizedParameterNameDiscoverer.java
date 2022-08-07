@@ -16,12 +16,12 @@
 
 package org.springframework.core;
 
+import org.springframework.lang.Nullable;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.springframework.lang.Nullable;
 
 /**
  * {@link ParameterNameDiscoverer} implementation that tries several discoverer
@@ -36,6 +36,10 @@ import org.springframework.lang.Nullable;
  */
 public class PrioritizedParameterNameDiscoverer implements ParameterNameDiscoverer {
 
+	/*
+	 * 所为的优先级就是指的先添加的优先级高，ArrayList就是体现
+	 *
+	 */
 	private final List<ParameterNameDiscoverer> parameterNameDiscoverers = new ArrayList<>(2);
 
 
@@ -52,12 +56,12 @@ public class PrioritizedParameterNameDiscoverer implements ParameterNameDiscover
 	@Nullable
 	public String[] getParameterNames(Method method) {
 		for (ParameterNameDiscoverer pnd : this.parameterNameDiscoverers) {
-			String[] result = pnd.getParameterNames(method);
-			if (result != null) {
+			String[] result = pnd.getParameterNames(method); // 委托给具体的发现器来实现
+			if (result != null) { // 如果不为空，则返回；否则继续尝试下一个发现器
 				return result;
 			}
 		}
-		return null;
+		return null; // 如果所有的发现器都不能处理，那么返回null
 	}
 
 	@Override

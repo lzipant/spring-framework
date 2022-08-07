@@ -16,16 +16,16 @@
 
 package org.springframework.web.method.support;
 
+import org.springframework.core.MethodParameter;
+import org.springframework.lang.Nullable;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.springframework.core.MethodParameter;
-import org.springframework.lang.Nullable;
-import org.springframework.web.bind.support.WebDataBinderFactory;
-import org.springframework.web.context.request.NativeWebRequest;
 
 /**
  * Resolves method parameters by delegating to a list of registered
@@ -114,12 +114,15 @@ public class HandlerMethodArgumentResolverComposite implements HandlerMethodArgu
 	public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
 
-		HandlerMethodArgumentResolver resolver = getArgumentResolver(parameter);
+		/*
+			这里需要去看一下Spring提供的默认的参数解析器都能够解析哪些参数，也就是去看各种HandlerMethodArgumentResolver的supportsParameter方法
+		 */
+		HandlerMethodArgumentResolver resolver = getArgumentResolver(parameter); // 根据参数寻找合适的解析器
 		if (resolver == null) {
 			throw new IllegalArgumentException("Unsupported parameter type [" +
 					parameter.getParameterType().getName() + "]. supportsParameter should be called first.");
 		}
-		return resolver.resolveArgument(parameter, mavContainer, webRequest, binderFactory);
+		return resolver.resolveArgument(parameter, mavContainer, webRequest, binderFactory); // 使用解析器解析参数
 	}
 
 	/**

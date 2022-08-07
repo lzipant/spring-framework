@@ -16,16 +16,6 @@
 
 package org.springframework.web.servlet.support;
 
-import java.util.EnumSet;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.Filter;
-import javax.servlet.FilterRegistration;
-import javax.servlet.FilterRegistration.Dynamic;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRegistration;
-
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.core.Conventions;
 import org.springframework.lang.Nullable;
@@ -35,6 +25,10 @@ import org.springframework.web.context.AbstractContextLoaderInitializer;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.FrameworkServlet;
+
+import javax.servlet.*;
+import javax.servlet.FilterRegistration.Dynamic;
+import java.util.EnumSet;
 
 /**
  * Base class for {@link org.springframework.web.WebApplicationInitializer}
@@ -60,6 +54,11 @@ public abstract class AbstractDispatcherServletInitializer extends AbstractConte
 
 	@Override
 	public void onStartup(ServletContext servletContext) throws ServletException {
+		/*
+		 * 两部分逻辑：
+		 * 	第一步是初始化父容器
+		 *  第二部是初始化Web容器
+		 */
 		super.onStartup(servletContext);
 		registerDispatcherServlet(servletContext);
 	}
@@ -79,14 +78,14 @@ public abstract class AbstractDispatcherServletInitializer extends AbstractConte
 		String servletName = getServletName();
 		Assert.hasLength(servletName, "getServletName() must not return null or empty");
 
-		WebApplicationContext servletAppContext = createServletApplicationContext();
+		WebApplicationContext servletAppContext = createServletApplicationContext(); // 创建spring的web子容器
 		Assert.notNull(servletAppContext, "createServletApplicationContext() must not return null");
 
-		FrameworkServlet dispatcherServlet = createDispatcherServlet(servletAppContext);
+		FrameworkServlet dispatcherServlet = createDispatcherServlet(servletAppContext); // 创建DispatcherServlet，并将web子容器赋值给内部的webApplicationContext属性
 		Assert.notNull(dispatcherServlet, "createDispatcherServlet(WebApplicationContext) must not return null");
 		dispatcherServlet.setContextInitializers(getServletApplicationContextInitializers());
 
-		ServletRegistration.Dynamic registration = servletContext.addServlet(servletName, dispatcherServlet);
+		ServletRegistration.Dynamic registration = servletContext.addServlet(servletName, dispatcherServlet); // 注册DispatcherServlet
 		if (registration == null) {
 			throw new IllegalStateException("Failed to register servlet with name '" + servletName + "'. " +
 					"Check if there is another servlet registered under the same name.");
@@ -132,7 +131,7 @@ public abstract class AbstractDispatcherServletInitializer extends AbstractConte
 	 * Previously, it insisted on returning a {@link DispatcherServlet} or subclass thereof.
 	 */
 	protected FrameworkServlet createDispatcherServlet(WebApplicationContext servletAppContext) {
-		return new DispatcherServlet(servletAppContext);
+		return new DispatcherServlet(servletAppContext); // 可以看到，DispatcherServlet实际上是new出来的
 	}
 
 	/**

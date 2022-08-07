@@ -16,13 +16,12 @@
 
 package org.springframework.http.converter.json;
 
-import java.io.IOException;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
+
+import java.io.IOException;
 
 /**
  * Implementation of {@link org.springframework.http.converter.HttpMessageConverter} that can read and
@@ -56,7 +55,7 @@ public class MappingJackson2HttpMessageConverter extends AbstractJackson2HttpMes
 	 * provided by {@link Jackson2ObjectMapperBuilder}.
 	 */
 	public MappingJackson2HttpMessageConverter() {
-		this(Jackson2ObjectMapperBuilder.json().build());
+		this(Jackson2ObjectMapperBuilder.json().build()); // 调用的是下面那个构造器
 	}
 
 	/**
@@ -65,7 +64,7 @@ public class MappingJackson2HttpMessageConverter extends AbstractJackson2HttpMes
 	 * @see Jackson2ObjectMapperBuilder#json()
 	 */
 	public MappingJackson2HttpMessageConverter(ObjectMapper objectMapper) {
-		super(objectMapper, MediaType.APPLICATION_JSON, new MediaType("application", "*+json"));
+		super(objectMapper, MediaType.APPLICATION_JSON, new MediaType("application", "*+json")); // 设置了两种MediaType(媒体类型)
 	}
 
 

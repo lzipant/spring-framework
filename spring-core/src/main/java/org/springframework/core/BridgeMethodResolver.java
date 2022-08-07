@@ -16,18 +16,18 @@
 
 package org.springframework.core;
 
+import org.springframework.lang.Nullable;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.ConcurrentReferenceHashMap;
+import org.springframework.util.ReflectionUtils;
+import org.springframework.util.ReflectionUtils.MethodFilter;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import org.springframework.lang.Nullable;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.ConcurrentReferenceHashMap;
-import org.springframework.util.ReflectionUtils;
-import org.springframework.util.ReflectionUtils.MethodFilter;
 
 /**
  * Helper for resolving synthetic {@link Method#isBridge bridge Methods} to the
@@ -66,17 +66,20 @@ public final class BridgeMethodResolver {
 	 * if no more specific one could be found)
 	 */
 	public static Method findBridgedMethod(Method bridgeMethod) {
-		if (!bridgeMethod.isBridge()) {
+		if (!bridgeMethod.isBridge()) { // 如果不是桥接方法，直接返回
 			return bridgeMethod;
 		}
 		Method bridgedMethod = cache.get(bridgeMethod);
-		if (bridgedMethod == null) {
+		if (bridgedMethod == null) { // 没有命中缓存
 			// Gather all methods with matching name and parameter size.
 			List<Method> candidateMethods = new ArrayList<>();
 			MethodFilter filter = candidateMethod ->
-					isBridgedCandidateFor(candidateMethod, bridgeMethod);
+					isBridgedCandidateFor(candidateMethod, bridgeMethod); // 该过滤器根据方法名和参数个数是否相等作为过滤条件
 			ReflectionUtils.doWithMethods(bridgeMethod.getDeclaringClass(), candidateMethods::add, filter);
 			if (!candidateMethods.isEmpty()) {
+				/*
+				 * 如果过滤结果只有1个，那么直接采用；否则调用searchCandidates再次筛选
+				 */
 				bridgedMethod = candidateMethods.size() == 1 ?
 						candidateMethods.get(0) :
 						searchCandidates(candidateMethods, bridgeMethod);
@@ -84,7 +87,7 @@ public final class BridgeMethodResolver {
 			if (bridgedMethod == null) {
 				// A bridge method was passed in but we couldn't find the bridged method.
 				// Let's proceed with the passed-in method and hope for the best...
-				bridgedMethod = bridgeMethod;
+				bridgedMethod = bridgeMethod; // 如果仍没找到，则采用传递进来的方法
 			}
 			cache.put(bridgeMethod, bridgedMethod);
 		}
