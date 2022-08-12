@@ -39,7 +39,7 @@ public class SimpleAutowireCandidateResolver implements AutowireCandidateResolve
 
 	@Override
 	public boolean isAutowireCandidate(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
-		return bdHolder.getBeanDefinition().isAutowireCandidate();
+		return bdHolder.getBeanDefinition().isAutowireCandidate(); // AbstractBeanDefinition中定义了默认值，为true
 	}
 
 	@Override

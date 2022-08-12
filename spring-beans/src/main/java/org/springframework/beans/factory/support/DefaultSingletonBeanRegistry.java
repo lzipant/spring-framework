@@ -169,20 +169,20 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
 		// Quick check for existing instance without full singleton lock
 		Object singletonObject = this.singletonObjects.get(beanName);
-		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
+		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) { // 如果bean没在缓存中且正在创建
 			singletonObject = this.earlySingletonObjects.get(beanName);
 			if (singletonObject == null && allowEarlyReference) {
 				synchronized (this.singletonObjects) {
 					// Consistent creation of early reference within full singleton lock
 					singletonObject = this.singletonObjects.get(beanName);
-					if (singletonObject == null) {
+					if (singletonObject == null) { // double-check
 						singletonObject = this.earlySingletonObjects.get(beanName);
 						if (singletonObject == null) {
-							ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
+							ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName); // 从预创建的缓存中获取objectFactory
 							if (singletonFactory != null) {
 								singletonObject = singletonFactory.getObject();
-								this.earlySingletonObjects.put(beanName, singletonObject);
-								this.singletonFactories.remove(beanName);
+								this.earlySingletonObjects.put(beanName, singletonObject); // 加入预创建的对象缓存中
+								this.singletonFactories.remove(beanName); // 从objectFactory中移除相应的工厂
 							}
 						}
 					}
@@ -205,7 +205,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 		synchronized (this.singletonObjects) { // 同步创建单例bean的过程，避免出现线程不安全
 			Object singletonObject = this.singletonObjects.get(beanName); // 如果存在，那就直接返回了
 			if (singletonObject == null) {
-				if (this.singletonsCurrentlyInDestruction) { // 如果bean正在被销户，那么会抛出异常
+				if (this.singletonsCurrentlyInDestruction) { // 如果bean正在被销毁，那么会抛出异常
 					throw new BeanCreationNotAllowedException(beanName,
 							"Singleton bean creation not allowed while singletons of this factory are in destruction " +
 							"(Do not request a bean from a BeanFactory in a destroy method implementation!)");

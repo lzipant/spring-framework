@@ -281,10 +281,10 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 			synchronized (this.candidateConstructorsCache) {
 				// 为了线程安全，继续校验一次，属于double-check lock
 				candidateConstructors = this.candidateConstructorsCache.get(beanClass);
-				if (candidateConstructors == null) {
+				if (candidateConstructors == null) { // 不存在缓存
 					Constructor<?>[] rawCandidates;
 					try {
-						rawCandidates = beanClass.getDeclaredConstructors();
+						rawCandidates = beanClass.getDeclaredConstructors(); // 获取类中声明的构造器
 					}
 					catch (Throwable ex) {
 						throw new BeanCreationException(beanName,
@@ -296,7 +296,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					Constructor<?> defaultConstructor = null;
 					Constructor<?> primaryConstructor = BeanUtils.findPrimaryConstructor(beanClass);
 					int nonSyntheticConstructors = 0;
-					for (Constructor<?> candidate : rawCandidates) {
+					for (Constructor<?> candidate : rawCandidates) { // 遍历类中声明的构造器
 						if (!candidate.isSynthetic()) {
 							nonSyntheticConstructors++;
 						}
@@ -304,9 +304,9 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 							continue;
 						}
 						MergedAnnotation<?> ann = findAutowiredAnnotation(candidate);
-						if (ann == null) {
+						if (ann == null) { // 构造器中是否有@Autowired或@Value注解
 							Class<?> userClass = ClassUtils.getUserClass(beanClass);
-							if (userClass != beanClass) {
+							if (userClass != beanClass) { // 如果是代理类，那么看看父类（目标类）是否有@Autowired修饰的构造器
 								try {
 									Constructor<?> superCtor =
 											userClass.getDeclaredConstructor(candidate.getParameterTypes());
@@ -317,35 +317,36 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 								}
 							}
 						}
-						if (ann != null) {
-							if (requiredConstructor != null) {
+						if (ann != null) { // 如果由@Autowired注解修饰
+							if (requiredConstructor != null) { // 如果已存在required的构造器，那么抛出异常（标有@Autowired注解的构造器最多只能有一个）
 								throw new BeanCreationException(beanName,
 										"Invalid autowire-marked constructor: " + candidate +
 										". Found constructor with 'required' Autowired annotation already: " +
 										requiredConstructor);
 							}
 							boolean required = determineRequiredStatus(ann);
-							if (required) {
+							if (required) { // 如果构造器的@Autorwired注解的required属性为ture
 								if (!candidates.isEmpty()) {
 									throw new BeanCreationException(beanName,
 											"Invalid autowire-marked constructors: " + candidates +
 											". Found constructor with 'required' Autowired annotation: " +
 											candidate);
 								}
-								requiredConstructor = candidate;
+								requiredConstructor = candidate; // 将该构造器标记为required，会影响后续的遍历
 							}
-							candidates.add(candidate);
+							candidates.add(candidate); // 记录下来，作为候选构造器
 						}
 						else if (candidate.getParameterCount() == 0) {
-							defaultConstructor = candidate;
+							defaultConstructor = candidate; // 默认构造器
 						}
 					}
-					if (!candidates.isEmpty()) {
+					if (!candidates.isEmpty()) { // 若能找到候选构造器
 						// Add default constructor to list of optional constructors, as fallback.
-						if (requiredConstructor == null) {
+						if (requiredConstructor == null) { // 没有required的构造器且默认构造器不为null，那么将默认构造器也当作候选构造器
 							if (defaultConstructor != null) {
 								candidates.add(defaultConstructor);
 							}
+							// 如果没有默认的无参构造函数，且有@Autowired（required = false）的构造函数，则发出警告信
 							else if (candidates.size() == 1 && logger.isInfoEnabled()) {
 								logger.info("Inconsistent constructor declaration on bean with name '" + beanName +
 										"': single autowire-marked constructor flagged as optional - " +
@@ -355,7 +356,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 						}
 						candidateConstructors = candidates.toArray(new Constructor<?>[0]);
 					}
-					else if (rawCandidates.length == 1 && rawCandidates[0].getParameterCount() > 0) {
+					else if (rawCandidates.length == 1 && rawCandidates[0].getParameterCount() > 0) { // 只有一个有参构造器
 						candidateConstructors = new Constructor<?>[] {rawCandidates[0]};
 					}
 					else if (nonSyntheticConstructors == 2 && primaryConstructor != null &&
@@ -365,10 +366,10 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					else if (nonSyntheticConstructors == 1 && primaryConstructor != null) {
 						candidateConstructors = new Constructor<?>[] {primaryConstructor};
 					}
-					else {
+					else { // 没找到候选构造器，比如不存在由@Autowired修饰的构造器，最后下面会返回null
 						candidateConstructors = new Constructor<?>[0];
 					}
-					this.candidateConstructorsCache.put(beanClass, candidateConstructors);
+					this.candidateConstructorsCache.put(beanClass, candidateConstructors); // 加入缓存
 				}
 			}
 		}
@@ -619,23 +620,25 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 				}
 			}
 			else {
-				value = resolveFieldValue(field, bean, beanName);
+				value = resolveFieldValue(field, bean, beanName); // 解析出被依赖的bean
 			}
 			if (value != null) {
-				ReflectionUtils.makeAccessible(field);
-				field.set(bean, value);
+				ReflectionUtils.makeAccessible(field); // 可见即使字段是private的，也没关系
+				field.set(bean, value); // 设置值
 			}
 		}
 
 		@Nullable
 		private Object resolveFieldValue(Field field, Object bean, @Nullable String beanName) {
+			// 将field属性和required属性封装成desc(依赖描述符)
 			DependencyDescriptor desc = new DependencyDescriptor(field, this.required);
 			desc.setContainingClass(bean.getClass());
-			Set<String> autowiredBeanNames = new LinkedHashSet<>(1);
+			Set<String> autowiredBeanNames = new LinkedHashSet<>(1); // 所需注入的bean的名称
 			Assert.state(beanFactory != null, "No BeanFactory available");
 			TypeConverter typeConverter = beanFactory.getTypeConverter();
 			Object value;
 			try {
+				// ---- 重点 ----：从spring中取出当前bean所依赖的bean
 				value = beanFactory.resolveDependency(desc, beanName, autowiredBeanNames, typeConverter);
 			}
 			catch (BeansException ex) {
@@ -646,7 +649,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					Object cachedFieldValue = null;
 					if (value != null || this.required) {
 						cachedFieldValue = desc;
-						registerDependentBeans(beanName, autowiredBeanNames);
+						registerDependentBeans(beanName, autowiredBeanNames); // 再注册一遍bean依赖关系
 						if (autowiredBeanNames.size() == 1) {
 							String autowiredBeanName = autowiredBeanNames.iterator().next();
 							if (beanFactory.containsBean(autowiredBeanName) &&
