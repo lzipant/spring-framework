@@ -275,8 +275,27 @@ public class ContextLoader {
 		try {
 			// Store context in local instance variable, to guarantee that
 			// it is available on ServletContext shutdown.
-			/*
-			 * 一般基于web.xml配置的，这里都是null；而通过注解配置的，这里都不是null
+			/**
+			 * 一般基于web.xml配置的，这里都是null；而通过代码配置的，这里都不是null
+			 *
+			 * 这里说一下基于web.xml配置的和代码配置的父子容器的情况：
+			 * 基于代码配置：
+			 *	AbstractDispatcherServletInitializer#onStartup方法内部，会初始化父子容器
+			 * 	其中父容器是手动new AnnotationConfigWebApplicationContext()创建的
+			 *  创建完容器后紧接着创建ContextLoaderListener，将容器对象作为参数传入构造器，最终会调用到本类的有参构造器，所以为什么说代码配置的，这里的容器不是null
+			 *
+			 *  第二步就是创建子容器，是手动创建的DispatcherServlet对象，这个对象虽然不是容器，但是其父类（FrameworkServlet）内部有一个webApplicationContext的属性，这就是容器
+			 *
+			 * 基于web.xml的配置：
+			 * 	很明显，执行这里之前，还没执行过其他spring的代码（除了ContextLoaderListener类的contextInitialized方法），所以context是null
+			 * 	创建父容器时，先确定父容器的类型，如果配置有名为contextClass的<context-param></context-param>，那么就以这个为准，
+			 * 	否则使用默认策略，默认策略定义在ContextLoader.properties属性文件中，默认的容器类型是XmlWebApplicationContext
+			 *
+			 * 	子容器的初始化容器被忽略，因为DispatcherServlet的初始化是由Servlet容器（如tomcat）触发的，
+			 * 	别忘了，servlet有一个叫作init()的初始化方法，不管是基于web.xml配置还是代码配置，这个方法都会执行
+			 * 	所以里面会判断子容器是否不为null（有可能手动设置过，就像上面分析到的），为null才会进行创建，
+			 * 	最终在FrameworkServlet#createWebApplicationContext()方法中创建了子容器
+			 *
 			 */
 			if (this.context == null) {
 				this.context = createWebApplicationContext(servletContext);
@@ -290,7 +309,7 @@ public class ContextLoader {
 					if (cwac.getParent() == null) {
 						// The context instance was injected without an explicit parent ->
 						// determine parent for root web application context, if any.
-						ApplicationContext parent = loadParentContext(servletContext);
+						ApplicationContext parent = loadParentContext(servletContext); // 这里直接返回的是null
 						cwac.setParent(parent);
 					}
 
@@ -407,7 +426,7 @@ public class ContextLoader {
 		// is refreshed; do it eagerly here to ensure servlet property sources are in place for
 		// use in any post-processing or initialization that occurs below prior to #refresh
 		/*
-		 * getEnvironment的时候会判断是否已经创建过Environment对象，如果没有，则新创建，是StandardServletEnvironment类型的(注意AbstractApplicationContext的子类会重写getEnvironment方法)。
+		 * getEnvironment的时候会判断是否已经创建过Environment对象，如果没有，则新创建，是StandardServletEnvironment类型的(注意AbstractRefreshableWebApplicationContext的子类会重写getEnvironment方法)。
 		 * 注意，容器在setConfigLocation的时候调用resolvePath的时候也会调用getEnvironment
 		 *
 		 */

@@ -37,6 +37,10 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
  * return all configuration via {@link #getRootConfigClasses()} and return
  * {@code null} from {@link #getServletConfigClasses()}.
  *
+ * 一般如果要自定义实现WebApplicationInitializer的子类的话，那么一般继承该抽象类，因为该抽象类是框架提供的最下层的，功能相对也最丰富
+ * onStartup方法被定义在AbstractDispatcherServletInitializer内部，提供了父子容器的实现
+ *
+ *
  * @author Arjen Poutsma
  * @author Chris Beams
  * @since 3.2

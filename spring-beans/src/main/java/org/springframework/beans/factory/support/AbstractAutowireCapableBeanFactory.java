@@ -491,7 +491,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			/*
 			 * 这里特别重要
 			 * 给BeanPostProcessor一个机会返回代理对象，以替换原始对象
-			 *
+			 * ---- 这里是AOP处理的入口 ----
 			 */
 			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
 			if (bean != null) {
@@ -1149,7 +1149,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 						/*
 						 * 应用bean的后置处理器的后置逻辑
 						 * 注意，这里和执行前置逻辑不一样的是，这些bean的后置处理器的后置逻辑都会执行
-						 *
+						 * 另外还要注意，这里执行的是后置Initialization逻辑，而不是Instantiation
 						 */
 						bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
 					}

@@ -16,14 +16,8 @@
 
 package org.springframework.context.annotation;
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.framework.AopInfrastructureBean;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -40,6 +34,11 @@ import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Utilities for identifying {@link Configuration} classes.
@@ -122,6 +121,7 @@ abstract class ConfigurationClassUtils {
 			}
 		}
 
+		// 如果存在@Configuration注解，那么获取注解内的proxyBeanMethods属性，并据此设置配置的模式（full还是lite）
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
@@ -151,11 +151,19 @@ abstract class ConfigurationClassUtils {
 	 */
 	public static boolean isConfigurationCandidate(AnnotationMetadata metadata) {
 		// Do not consider an interface or an annotation...
+		// 不能是接口
 		if (metadata.isInterface()) {
 			return false;
 		}
 
 		// Any of the typical annotations found?
+		/*
+		 * 只要被下面任意几个注解修饰，都算：
+		 * @Component
+		 * @ComponentScan
+		 * @Import
+		 * @ImportResource
+		 */
 		for (String indicator : candidateIndicators) {
 			if (metadata.isAnnotated(indicator)) {
 				return true;
@@ -163,6 +171,13 @@ abstract class ConfigurationClassUtils {
 		}
 
 		// Finally, let's look for @Bean methods...
+		/*
+		 * 另外，就算只有@Bean修饰的方法，那么也算
+		 * 所以，并不一定必须在类上标注@Configuration注解
+		 * 但最好放在@Configuration类中，因为可以使用full模式的配置
+		 * 因为在full模式的情况下，方法会被代理，调用方法返回的是容器中的对象；
+		 * 而在lite模式的情况下，方法不会被代理，每次调用返回的都是新对象
+		 */
 		return hasBeanMethods(metadata);
 	}
 

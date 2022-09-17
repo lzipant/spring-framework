@@ -70,6 +70,14 @@ package org.springframework.core.env;
  */
 public interface Environment extends PropertyResolver {
 
+	/*
+	 * 其实Environment可以看作两部分：
+	 * Property
+	 * Profile
+	 * Property主要是在PropertyResolver中定义了
+	 * Environment存在的意义就是对Property提供Profile支持
+	 */
+
 	/**
 	 * Return the set of profiles explicitly made active for this environment. Profiles
 	 * are used for creating logical groupings of bean definitions to be registered
@@ -83,7 +91,7 @@ public interface Environment extends PropertyResolver {
 	 * @see ConfigurableEnvironment#setActiveProfiles
 	 * @see AbstractEnvironment#ACTIVE_PROFILES_PROPERTY_NAME
 	 */
-	String[] getActiveProfiles();
+	String[] getActiveProfiles(); // 返回激活的profile数组
 
 	/**
 	 * Return the set of profiles to be active by default when no active profiles have
@@ -92,7 +100,7 @@ public interface Environment extends PropertyResolver {
 	 * @see ConfigurableEnvironment#setDefaultProfiles
 	 * @see AbstractEnvironment#DEFAULT_PROFILES_PROPERTY_NAME
 	 */
-	String[] getDefaultProfiles();
+	String[] getDefaultProfiles(); // 返回默认的profile数组
 
 	/**
 	 * Return whether one or more of the given profiles is active or, in the case of no

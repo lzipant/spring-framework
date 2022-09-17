@@ -79,6 +79,8 @@ public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 	 * entirely background role and has no relevance to the end-user. This hint is
 	 * used when registering beans that are completely part of the internal workings
 	 * of a {@link org.springframework.beans.factory.parsing.ComponentDefinition}.
+	 *
+	 * 表示该bean是Spring框架内部提供的，不是用户定义的
 	 */
 	int ROLE_INFRASTRUCTURE = 2;
 
@@ -151,6 +153,8 @@ public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 	/**
 	 * Set the names of the beans that this bean depends on being initialized.
 	 * The bean factory will guarantee that these beans get initialized first.
+	 *
+	 * 设置该bean所依赖的bean的名称（可设置多个）
 	 */
 	void setDependsOn(@Nullable String... dependsOn);
 
