@@ -37,6 +37,7 @@ import org.springframework.transaction.config.TransactionManagementConfigUtils;
  * @see TransactionManagementConfigurationSelector
  * @see AspectJJtaTransactionManagementConfiguration
  */
+// @SuppressWarnings("ALL")
 @Configuration
 @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 public class AspectJTransactionManagementConfiguration extends AbstractTransactionManagementConfiguration {

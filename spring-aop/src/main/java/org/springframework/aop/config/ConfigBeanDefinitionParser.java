@@ -103,18 +103,27 @@ class ConfigBeanDefinitionParser implements BeanDefinitionParser {
 				new CompositeComponentDefinition(element.getTagName(), parserContext.extractSource(element));
 		parserContext.pushContainingComponent(compositeDef);
 
+		/*
+		 * 注意，这里注册的是AspectJAwareAdvisorAutoProxyCreator，
+		 * 而不是<aop:aspectj-autoproxy/>注册的AnnotationAwareAspectJAutoProxyCreator，
+		 * 注意两者的区别，后者是前者的子类，后者能够扫描到@Aspect注解，而前者不能
+		 */
 		configureAutoProxyCreator(parserContext, element);
 
+		// 处理子标签
 		List<Element> childElts = DomUtils.getChildElements(element);
 		for (Element elt: childElts) {
 			String localName = parserContext.getDelegate().getLocalName(elt);
 			if (POINTCUT.equals(localName)) {
+				// 处理<aop:pointcut/>
 				parsePointcut(elt, parserContext);
 			}
 			else if (ADVISOR.equals(localName)) {
+				// 处理<aop:advisor/>
 				parseAdvisor(elt, parserContext);
 			}
 			else if (ASPECT.equals(localName)) {
+				// 处理<aop:aspect/>
 				parseAspect(elt, parserContext);
 			}
 		}

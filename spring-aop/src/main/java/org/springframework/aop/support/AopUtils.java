@@ -233,28 +233,35 @@ public abstract class AopUtils {
 			return true;
 		}
 
+		/*
+		 * 如果methodMatcher是IntroductionAwareMethodMatcher类型的，那么将其转换为该类型的变量，
+		 * AspectJExpressionPointcut就是IntroductionAwareMethodMatcher接口的实现类
+		 */
 		IntroductionAwareMethodMatcher introductionAwareMethodMatcher = null;
 		if (methodMatcher instanceof IntroductionAwareMethodMatcher) {
 			introductionAwareMethodMatcher = (IntroductionAwareMethodMatcher) methodMatcher;
 		}
 
+		// 获取目标类以及实现的所有接口，准备判断里面的方法
 		Set<Class<?>> classes = new LinkedHashSet<>();
 		if (!Proxy.isProxyClass(targetClass)) {
 			classes.add(ClassUtils.getUserClass(targetClass));
 		}
 		classes.addAll(ClassUtils.getAllInterfacesForClassAsSet(targetClass));
 
+		// 遍历所有的类或接口，检查里面是否存在能匹配上的方法
 		for (Class<?> clazz : classes) {
 			Method[] methods = ReflectionUtils.getAllDeclaredMethods(clazz);
 			for (Method method : methods) {
 				if (introductionAwareMethodMatcher != null ?
 						introductionAwareMethodMatcher.matches(method, targetClass, hasIntroductions) :
 						methodMatcher.matches(method, targetClass)) {
+					// 如果至少存在一个方法能够匹配上，那么说明这个Advisor是可以应用在当前的bean上的
 					return true;
 				}
 			}
 		}
-
+		// 如果一个方法也不能匹配上，那么说明这个Advisor是不能应用在当前的bean上的
 		return false;
 	}
 
@@ -341,7 +348,7 @@ public abstract class AopUtils {
 		// Use reflection to invoke the method.
 		try {
 			ReflectionUtils.makeAccessible(method);
-			return method.invoke(target, args);
+			return method.invoke(target, args); // 基于反射调用方法
 		}
 		catch (InvocationTargetException ex) {
 			// Invoked method threw a checked exception.

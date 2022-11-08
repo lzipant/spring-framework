@@ -29,7 +29,7 @@ public class HelloController {
 
 	@GetMapping("/greet")
 	public String hello(String name) {
-		return "[spring-framework] hello : " + name.toUpperCase();
+		return "[spring-framework] hello1 : " + name.toUpperCase();
 	}
 
 	@PostMapping("/uploadFile")

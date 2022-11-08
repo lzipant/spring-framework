@@ -36,6 +36,7 @@ import org.springframework.context.annotation.Role;
  * @since 3.1
  * @see EnableSpringConfigured
  */
+@SuppressWarnings("ALL")
 @Configuration
 public class SpringConfiguredConfiguration {
 

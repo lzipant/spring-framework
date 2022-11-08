@@ -45,10 +45,18 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 	private final AspectJAdvisorFactory advisorFactory;
 
 	@Nullable
-	private volatile List<String> aspectBeanNames;
+	private volatile List<String> aspectBeanNames; // 缓存被@AspectJ修饰的bean的名称
 
+	/*
+	 * 缓存@AspectJ修饰的单例bean中解析出来的Advisor
+	 * key: bean名称
+	 * value: 其内部解析出来的Advisor集合
+	 */
 	private final Map<String, List<Advisor>> advisorsCache = new ConcurrentHashMap<>();
 
+	/*
+	 * 缓存@AspectJ修饰的bean的元数据实例构建工厂
+	 */
 	private final Map<String, MetadataAwareAspectInstanceFactory> aspectFactoryCache = new ConcurrentHashMap<>();
 
 
@@ -101,17 +109,24 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 						if (beanType == null) {
 							continue;
 						}
+						// 这个bean是否带有@Aspect注解，且名称没有以`ajc$`开头
 						if (this.advisorFactory.isAspect(beanType)) {
 							aspectNames.add(beanName);
 							AspectMetadata amd = new AspectMetadata(beanType, beanName);
+							// 是否是单例的Aspect(默认是单例的)
 							if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
 								MetadataAwareAspectInstanceFactory factory =
 										new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
+								/*
+								 * 解析aspect中带有@Before|@After|@Around|@AfterReturning|@AfterThrowing注解的方法
+								 *
+								 */
 								List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);
+								// 如果这个aspect是单例的，那么将解析出来的advisors进行缓存
 								if (this.beanFactory.isSingleton(beanName)) {
 									this.advisorsCache.put(beanName, classAdvisors);
 								}
-								else {
+								else { // 如果不是单例的，则缓存factory对象
 									this.aspectFactoryCache.put(beanName, factory);
 								}
 								advisors.addAll(classAdvisors);
@@ -135,16 +150,18 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 			}
 		}
 
+		// 如果已经对aspect已经处理过一遍了
+
 		if (aspectNames.isEmpty()) {
 			return Collections.emptyList();
 		}
 		List<Advisor> advisors = new ArrayList<>();
 		for (String aspectName : aspectNames) {
 			List<Advisor> cachedAdvisors = this.advisorsCache.get(aspectName);
-			if (cachedAdvisors != null) {
+			if (cachedAdvisors != null) { // 有缓存的advisor，则直接添加
 				advisors.addAll(cachedAdvisors);
 			}
-			else {
+			else { // 没有缓存的advisor，则进行构建
 				MetadataAwareAspectInstanceFactory factory = this.aspectFactoryCache.get(aspectName);
 				advisors.addAll(this.advisorFactory.getAdvisors(factory));
 			}

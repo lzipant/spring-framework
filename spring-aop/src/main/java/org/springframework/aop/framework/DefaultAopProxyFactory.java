@@ -54,6 +54,17 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 
 	@Override
 	public AopProxy createAopProxy(AdvisedSupport config) throws AopConfigException {
+		// 判断是使用JDK动态代理还是CGLIB动态代理
+		/*
+		 * 是否满足下面三个条件之一：
+		 *  1、是否进行代理优化（这个是在哪里进行配置的？）
+		 *  2、是否代理类
+		 *  3、目标类没有实现接口
+		 *
+		 * 结合这里的条件判断，可以得知proxy-target-class的配置含义，总结如下：
+		 * 		当为 false 时，优先使用 JDK 动态代理，如果目标类没有实现可代理的接口，那么还是使用 CGLIB 动态代理
+		 * 		如果为 true，优先使用 CGLIB 动态代理，如果目标类本身是一个接口，那么还是使用 JDK 动态代理
+		 */
 		if (!NativeDetector.inNativeImage() &&
 				(config.isOptimize() || config.isProxyTargetClass() || hasNoUserSuppliedProxyInterfaces(config))) {
 			Class<?> targetClass = config.getTargetClass();
@@ -61,6 +72,7 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 				throw new AopConfigException("TargetSource cannot determine target class: " +
 						"Either an interface or a target is required for proxy creation.");
 			}
+			// 如果目标类是接口，Proxy类的子类或者是lambda类（这个暂时忽略），则使用JDK动态代理
 			if (targetClass.isInterface() || Proxy.isProxyClass(targetClass) || ClassUtils.isLambdaClass(targetClass)) {
 				return new JdkDynamicAopProxy(config);
 			}

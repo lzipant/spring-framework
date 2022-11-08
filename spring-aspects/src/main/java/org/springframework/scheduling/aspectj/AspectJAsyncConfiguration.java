@@ -36,6 +36,7 @@ import org.springframework.scheduling.config.TaskManagementConfigUtils;
  * @see org.springframework.scheduling.annotation.AsyncConfigurationSelector
  * @see org.springframework.scheduling.annotation.ProxyAsyncConfiguration
  */
+@SuppressWarnings("ALL")
 @Configuration(proxyBeanMethods = false)
 @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 public class AspectJAsyncConfiguration extends AbstractAsyncConfiguration {

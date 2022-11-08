@@ -54,11 +54,13 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 		// This is somewhat tricky... We have to process introductions first,
 		// but we need to preserve order in the ultimate list.
 		AdvisorAdapterRegistry registry = GlobalAdvisorAdapterRegistry.getInstance();
+		// 获取所有能够应用到targetClass的advisor
 		Advisor[] advisors = config.getAdvisors();
 		List<Object> interceptorList = new ArrayList<>(advisors.length);
 		Class<?> actualClass = (targetClass != null ? targetClass : method.getDeclaringClass());
 		Boolean hasIntroductions = null;
 
+		// 筛选出可以应用到当前方法的advisor
 		for (Advisor advisor : advisors) {
 			if (advisor instanceof PointcutAdvisor) {
 				// Add it conditionally.
@@ -75,8 +77,10 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 					else {
 						match = mm.matches(method, actualClass);
 					}
-					if (match) {
+					if (match) { // 如果advisor能够应用与该方法
+						// 从advisor中取出advice，并包装成MethodInterceptor拦截器对象
 						MethodInterceptor[] interceptors = registry.getInterceptors(advisor);
+						// 如果方法匹配器需要在运行时进行一些检测，那么对方法拦截器进行封装
 						if (mm.isRuntime()) {
 							// Creating a new object instance in the getInterceptors() method
 							// isn't a problem as we normally cache created chains.
@@ -84,7 +88,7 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 								interceptorList.add(new InterceptorAndDynamicMethodMatcher(interceptor, mm));
 							}
 						}
-						else {
+						else { // 否则，直接将方法拦截器添加到集合中
 							interceptorList.addAll(Arrays.asList(interceptors));
 						}
 					}
@@ -103,6 +107,7 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 			}
 		}
 
+		// advisor都是有序的，所以这里interceptor也是有序的
 		return interceptorList;
 	}
 
