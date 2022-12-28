@@ -114,6 +114,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
+	// 保存需要处理的注解
 	private final Set<Class<? extends Annotation>> autowiredAnnotationTypes = new LinkedHashSet<>(4);
 
 	private String requiredParameterName = "required";
@@ -129,6 +130,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	private final Map<Class<?>, Constructor<?>[]> candidateConstructorsCache = new ConcurrentHashMap<>(256);
 
+	// 缓存需要注入的字段元信息
 	private final Map<String, InjectionMetadata> injectionMetadataCache = new ConcurrentHashMap<>(256);
 
 
@@ -143,6 +145,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 		this.autowiredAnnotationTypes.add(Autowired.class);
 		this.autowiredAnnotationTypes.add(Value.class);
 		try {
+			// 如果存在JSR-330的@Inject注解，那么也可以支持
 			this.autowiredAnnotationTypes.add((Class<? extends Annotation>)
 					ClassUtils.forName("javax.inject.Inject", AutowiredAnnotationBeanPostProcessor.class.getClassLoader()));
 			logger.trace("JSR-330 'javax.inject.Inject' annotation found and supported for autowiring");
@@ -224,6 +227,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	@Override
 	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
+		// 找到这个bean所有需要注入的属性
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, beanType, null);
 		metadata.checkConfigMembers(beanDefinition);
 	}
@@ -378,8 +382,10 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	@Override
 	public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) {
+		// 找到这个bean的注入元信息对象
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, bean.getClass(), pvs);
 		try {
+			// 进行注入
 			metadata.inject(bean, beanName, pvs);
 		}
 		catch (BeanCreationException ex) {
@@ -425,9 +431,12 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	private InjectionMetadata findAutowiringMetadata(String beanName, Class<?> clazz, @Nullable PropertyValues pvs) {
 		// Fall back to class name as cache key, for backwards compatibility with custom callers.
+		// 生成一个缓存key
 		String cacheKey = (StringUtils.hasLength(beanName) ? beanName : clazz.getName());
 		// Quick check on the concurrent map first, with minimal locking.
+		// 尝试从缓存中获取
 		InjectionMetadata metadata = this.injectionMetadataCache.get(cacheKey);
+		// 如果不在缓存中或者需要刷新，DCL判断
 		if (InjectionMetadata.needsRefresh(metadata, clazz)) {
 			synchronized (this.injectionMetadataCache) {
 				metadata = this.injectionMetadataCache.get(cacheKey);
@@ -435,7 +444,9 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					if (metadata != null) {
 						metadata.clear(pvs);
 					}
+					// 构建一个需要注入的元信息对象
 					metadata = buildAutowiringMetadata(clazz);
+					// 加入到缓存中
 					this.injectionMetadataCache.put(cacheKey, metadata);
 				}
 			}
@@ -452,29 +463,40 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 		Class<?> targetClass = clazz;
 
 		do {
+			// 创建集合，用于保存@Autowired、@Value注解标注的字段
 			final List<InjectionMetadata.InjectedElement> currElements = new ArrayList<>();
-
+			// 遍历targetClass中的所有字段
 			ReflectionUtils.doWithLocalFields(targetClass, field -> {
+				// 找到该字段上的相应注解
 				MergedAnnotation<?> ann = findAutowiredAnnotation(field);
+				// 存在相应注解，则进行处理
 				if (ann != null) {
+					// 不注入static字段
 					if (Modifier.isStatic(field.getModifiers())) {
 						if (logger.isInfoEnabled()) {
 							logger.info("Autowired annotation is not supported on static fields: " + field);
 						}
 						return;
 					}
+					// 获取注解中的required配置
 					boolean required = determineRequiredStatus(ann);
+					// 根据字段和required参数构建一个AutowiredFieldElement并添加到集合中
 					currElements.add(new AutowiredFieldElement(field, required));
 				}
 			});
 
+			// 遍历targetClass中的所有方法
 			ReflectionUtils.doWithLocalMethods(targetClass, method -> {
+				// 获取这个方法的桥接方法
 				Method bridgedMethod = BridgeMethodResolver.findBridgedMethod(method);
+				// 如果是桥接方法，则跳过
 				if (!BridgeMethodResolver.isVisibilityBridgeMethodPair(method, bridgedMethod)) {
 					return;
 				}
+				// 找到该方法的@Autowired或者@Value注解，如果不存在，则跳过后续的处理
 				MergedAnnotation<?> ann = findAutowiredAnnotation(bridgedMethod);
 				if (ann != null && method.equals(ClassUtils.getMostSpecificMethod(method, clazz))) {
+					// static方法不处理
 					if (Modifier.isStatic(method.getModifiers())) {
 						if (logger.isInfoEnabled()) {
 							logger.info("Autowired annotation is not supported on static methods: " + method);
@@ -487,17 +509,22 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 									method);
 						}
 					}
+					// 获取注解的required配置
 					boolean required = determineRequiredStatus(ann);
+					// 构建一个属性描述器
 					PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
+					// 构建一个AutowiredMethodElement对象并添加到集合中
 					currElements.add(new AutowiredMethodElement(method, required, pd));
 				}
 			});
 
 			elements.addAll(0, currElements);
+			// 找到父类，继续处理
 			targetClass = targetClass.getSuperclass();
 		}
 		while (targetClass != null && targetClass != Object.class);
 
+		// 根据从这个bean解析出来的所有InjectedElement对象生成一个InjectionMetadata注入元信息对象并返回
 		return InjectionMetadata.forElements(elements, clazz);
 	}
 
@@ -594,10 +621,13 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 	 */
 	private class AutowiredFieldElement extends InjectionMetadata.InjectedElement {
 
+		// 是否必须
 		private final boolean required;
 
+		// 是否被缓存起来了
 		private volatile boolean cached;
 
+		// 被缓存起来的字段值对象
 		@Nullable
 		private volatile Object cachedFieldValue;
 
@@ -608,8 +638,10 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 		@Override
 		protected void inject(Object bean, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
+			// 获取字段
 			Field field = (Field) this.member;
 			Object value;
+			// 如果进行了缓存，则尝试从缓存中获取
 			if (this.cached) {
 				try {
 					value = resolvedCachedArgument(beanName, this.cachedFieldValue);
@@ -622,6 +654,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 			else {
 				value = resolveFieldValue(field, bean, beanName); // 解析出被依赖的bean
 			}
+			// 如果找到了该字段对应的值，那么进行赋值
 			if (value != null) {
 				ReflectionUtils.makeAccessible(field); // 可见即使字段是private的，也没关系
 				field.set(bean, value); // 设置值
@@ -644,6 +677,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 			catch (BeansException ex) {
 				throw new UnsatisfiedDependencyException(null, beanName, new InjectionPoint(field), ex);
 			}
+			// 和缓存相关，如果有必要，则将本次找到的注入对象缓存起来，避免下次再次进行解析
 			synchronized (this) {
 				if (!this.cached) {
 					Object cachedFieldValue = null;
@@ -673,10 +707,13 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 	 */
 	private class AutowiredMethodElement extends InjectionMetadata.InjectedElement {
 
+		// 是否必须
 		private final boolean required;
 
+		// 是否被缓存起来了
 		private volatile boolean cached;
 
+		// 被缓存起来的字段值对象
 		@Nullable
 		private volatile Object[] cachedMethodArguments;
 
@@ -690,8 +727,10 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 			if (checkPropertySkipping(pvs)) {
 				return;
 			}
+			// 获取method方法
 			Method method = (Method) this.member;
 			Object[] arguments;
+			// 如果被缓存起来了，则从缓存中获取方法参数对象
 			if (this.cached) {
 				try {
 					arguments = resolveCachedArguments(beanName);
@@ -701,12 +740,14 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					arguments = resolveMethodArguments(method, bean, beanName);
 				}
 			}
-			else {
+			else { // 否则开始进行解析
 				arguments = resolveMethodArguments(method, bean, beanName);
 			}
+			// 如果找到了该方法的参数，则进行属性赋值
 			if (arguments != null) {
 				try {
 					ReflectionUtils.makeAccessible(method);
+					// 通过反射机制调用该方法
 					method.invoke(bean, arguments);
 				}
 				catch (InvocationTargetException ex) {

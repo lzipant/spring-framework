@@ -245,16 +245,20 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * @return number of beans registered 返回扫描到的bean个数
 	 */
 	public int scan(String... basePackages) {
+		// 获取扫描前的beanDefinition数量
 		int beanCountAtScanStart = this.registry.getBeanDefinitionCount();
 
+		// 进行扫描，将过滤出来的所有class文件生成对应的beanDefinition并注册
 		doScan(basePackages);
 
 		// Register annotation config processors, if necessary.
+		// 这里这个属性默认就是true
 		if (this.includeAnnotationConfig) {
 			// 注册（那6个默认的）注解配置处理器
 			AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 		}
 
+		// 返回本次扫描注册的beanDefinition的数量
 		return (this.registry.getBeanDefinitionCount() - beanCountAtScanStart);
 	}
 
@@ -290,6 +294,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
 				if (checkCandidate(beanName, candidate)) {
+					// 将beanDefinition封装成beanDefinitionHolder
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
 					// 根据@Scope注解中的值为beanDefinition设置相应的代理模式，后续在处理AOP相关问题时会用到
 					definitionHolder =

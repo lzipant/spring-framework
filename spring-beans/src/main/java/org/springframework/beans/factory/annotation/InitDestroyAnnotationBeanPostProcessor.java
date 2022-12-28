@@ -100,9 +100,11 @@ public class InitDestroyAnnotationBeanPostProcessor
 
 	protected transient Log logger = LogFactory.getLog(getClass());
 
+	// 初始化注解，默认为@PostConstruct
 	@Nullable
 	private Class<? extends Annotation> initAnnotationType;
 
+	// 销毁注解，默认为@PreDestroy
 	@Nullable
 	private Class<? extends Annotation> destroyAnnotationType;
 
@@ -152,8 +154,10 @@ public class InitDestroyAnnotationBeanPostProcessor
 
 	@Override
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		// 找到@PostConstruct和@PreDestroy注解标注的方法们所对应的LifecycleMetadata对象
 		LifecycleMetadata metadata = findLifecycleMetadata(bean.getClass());
 		try {
+			// 执行@PostConstruct标注额方法
 			metadata.invokeInitMethods(bean, beanName);
 		}
 		catch (InvocationTargetException ex) {
@@ -172,8 +176,10 @@ public class InitDestroyAnnotationBeanPostProcessor
 
 	@Override
 	public void postProcessBeforeDestruction(Object bean, String beanName) throws BeansException {
+		// 找到@PostConstruct和@PreDestroy注解标注的方法们所对应的LifecycleMetadata对象
 		LifecycleMetadata metadata = findLifecycleMetadata(bean.getClass());
 		try {
+			// 执行@PreDestroy方法
 			metadata.invokeDestroyMethods(bean, beanName);
 		}
 		catch (InvocationTargetException ex) {

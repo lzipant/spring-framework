@@ -211,6 +211,7 @@ public class SimpleAliasRegistry implements AliasRegistry {
 		String canonicalName = name;
 		// Handle aliasing...
 		String resolvedName;
+		// 如果name是bean的别名，那么循环获取别名对应的真实名称，直到获取不到别名为止(说明已经是真实名称了)
 		do {
 			resolvedName = this.aliasMap.get(canonicalName);
 			if (resolvedName != null) {

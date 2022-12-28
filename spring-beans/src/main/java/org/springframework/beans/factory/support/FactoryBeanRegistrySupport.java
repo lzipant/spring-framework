@@ -94,25 +94,35 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	 * @see org.springframework.beans.factory.FactoryBean#getObject()
 	 */
 	protected Object getObjectFromFactoryBean(FactoryBean<?> factory, String beanName, boolean shouldPostProcess) {
+		// 如果是单例模式且一级缓存中存在beanName对应的bean
 		if (factory.isSingleton() && containsSingleton(beanName)) {
+			// 锁住一级缓存，保证单例性
 			synchronized (getSingletonMutex()) {
+				// 从factoryBean缓存中获取bean对象
 				Object object = this.factoryBeanObjectCache.get(beanName);
+				// 如果缓存中没有
 				if (object == null) {
+					// 根据factory来获取对象，调用其getObject方法
 					object = doGetObjectFromFactoryBean(factory, beanName);
 					// Only post-process and store if not put there already during getObject() call above
 					// (e.g. because of circular reference processing triggered by custom getBean calls)
+					// 这里为什么再一次从缓存中获取？为什么不在调用doGetObjectFromFactoryBean前就执行这一步？
 					Object alreadyThere = this.factoryBeanObjectCache.get(beanName);
 					if (alreadyThere != null) {
 						object = alreadyThere;
 					}
 					else {
+						// 是否需要对bean进行后置处理
 						if (shouldPostProcess) {
+							// 如果该bean正在处于创建中，则直接返回
 							if (isSingletonCurrentlyInCreation(beanName)) {
 								// Temporarily return non-post-processed object, not storing it yet..
 								return object;
 							}
+							// 前置处理，将beanName标记为正在创建
 							beforeSingletonCreation(beanName);
 							try {
+								// 执行所有的BeanPostProcessor#postProcessAfterInitialization方法
 								object = postProcessObjectFromFactoryBean(object, beanName);
 							}
 							catch (Throwable ex) {
@@ -120,27 +130,34 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 										"Post-processing of FactoryBean's singleton object failed", ex);
 							}
 							finally {
+								// 后置处理，将beanName标记为不在创建中
 								afterSingletonCreation(beanName);
 							}
 						}
+						// 如果一级缓存中存在beanName对应的记录
 						if (containsSingleton(beanName)) {
+							// 将这个由factoryBean创建出来的目标对象保存至缓存中
 							this.factoryBeanObjectCache.put(beanName, object);
 						}
 					}
 				}
+				// 返回创建出来的对象
 				return object;
 			}
 		}
-		else {
+		else { // 非单例模式或一级缓存中不存在
+			// 直接调用FactoryBean#getObject()方法
 			Object object = doGetObjectFromFactoryBean(factory, beanName);
 			if (shouldPostProcess) {
 				try {
+					// 调用后置处理器进行后置处理
 					object = postProcessObjectFromFactoryBean(object, beanName);
 				}
 				catch (Throwable ex) {
 					throw new BeanCreationException(beanName, "Post-processing of FactoryBean's object failed", ex);
 				}
 			}
+			// 返回被创建出来的对象
 			return object;
 		}
 	}

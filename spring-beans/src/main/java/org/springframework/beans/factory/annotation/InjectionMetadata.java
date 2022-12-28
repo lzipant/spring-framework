@@ -68,6 +68,7 @@ public class InjectionMetadata {
 
 	private final Class<?> targetClass;
 
+	// 需要注入的字段或方法的元信息
 	private final Collection<InjectedElement> injectedElements;
 
 	@Nullable
@@ -116,6 +117,7 @@ public class InjectionMetadata {
 				(checkedElements != null ? checkedElements : this.injectedElements);
 		if (!elementsToIterate.isEmpty()) {
 			for (InjectedElement element : elementsToIterate) {
+				// 调用每个element的inject方法
 				element.inject(target, beanName, pvs);
 			}
 		}

@@ -302,7 +302,9 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 
 	@Override
 	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
+		// 先调用父类的
 		super.postProcessMergedBeanDefinition(beanDefinition, beanType, beanName);
+		// 找到@Resoruce注解标注的字段，构建一个InjectionMetadata对象，用于后续的属性注入
 		InjectionMetadata metadata = findResourceMetadata(beanName, beanType, null);
 		metadata.checkConfigMembers(beanDefinition);
 	}
@@ -355,6 +357,7 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 					if (metadata != null) {
 						metadata.clear(pvs);
 					}
+					// 解析出这个bean中带有@Resource注解的所有字段，构建成对应的ResourceElement对象，然后再构建一个InjectionMetadata对象
 					metadata = buildResourceMetadata(clazz);
 					this.injectionMetadataCache.put(cacheKey, metadata);
 				}

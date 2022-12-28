@@ -43,6 +43,7 @@ public interface BeanDefinitionReader {
 	 * Return the bean factory to register the bean definitions with.
 	 * <p>The factory is exposed through the {@link BeanDefinitionRegistry} interface,
 	 * encapsulating the methods that are relevant for bean definition handling.
+	 * 返回BeanDefinition注册中心
 	 */
 	BeanDefinitionRegistry getRegistry();
 
@@ -62,6 +63,7 @@ public interface BeanDefinitionReader {
 	 * This is a convenience to avoid explicit {@code ResourceLoader} handling.
 	 * @see #loadBeanDefinitions(String)
 	 * @see org.springframework.core.io.support.ResourcePatternResolver
+	 * 返回资源加载器
 	 */
 	@Nullable
 	ResourceLoader getResourceLoader();
@@ -71,6 +73,7 @@ public interface BeanDefinitionReader {
 	 * <p>{@code null} suggests to not load bean classes eagerly
 	 * but rather to just register bean definitions with class names,
 	 * with the corresponding classes to be resolved later (or never).
+	 * 返回类加载器
 	 */
 	@Nullable
 	ClassLoader getBeanClassLoader();
@@ -78,6 +81,7 @@ public interface BeanDefinitionReader {
 	/**
 	 * Return the {@link BeanNameGenerator} to use for anonymous beans
 	 * (without explicit bean name specified).
+	 * 返回bean名称生成器
 	 */
 	BeanNameGenerator getBeanNameGenerator();
 

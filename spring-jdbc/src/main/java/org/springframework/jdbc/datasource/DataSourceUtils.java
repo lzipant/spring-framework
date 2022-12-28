@@ -181,6 +181,7 @@ public abstract class DataSourceUtils {
 
 		boolean debugEnabled = logger.isDebugEnabled();
 		// Set read-only flag.
+		// 设置只读
 		if (definition != null && definition.isReadOnly()) {
 			try {
 				if (debugEnabled) {
@@ -204,18 +205,22 @@ public abstract class DataSourceUtils {
 
 		// Apply specific isolation level, if any.
 		Integer previousIsolationLevel = null;
+		// 设置隔离级别
 		if (definition != null && definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT) {
 			if (debugEnabled) {
 				logger.debug("Changing isolation level of JDBC Connection [" + con + "] to " +
 						definition.getIsolationLevel());
 			}
 			int currentIsolation = con.getTransactionIsolation();
+			// 如果@Transactional注解中配置的隔离级别和之前设置给连接隔离级别不一致
 			if (currentIsolation != definition.getIsolationLevel()) {
 				previousIsolationLevel = currentIsolation;
+				// 将所配置的隔离级别设置给连接
 				con.setTransactionIsolation(definition.getIsolationLevel());
 			}
 		}
 
+		// 返回连接原有的隔离级别，如果当前事务的隔离级别和之前的一样，那么返回null
 		return previousIsolationLevel;
 	}
 

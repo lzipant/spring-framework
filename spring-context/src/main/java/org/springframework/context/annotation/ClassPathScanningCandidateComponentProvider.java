@@ -309,10 +309,11 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * @return a corresponding Set of autodetected bean definitions
 	 */
 	public Set<BeanDefinition> findCandidateComponents(String basePackage) {
-		if (this.componentsIndex != null && indexSupportsIncludeFilters()) { // Spring5新增的一种扫描方式，用了索引，启动速度快，适合大型项目
+		// Spring5新增的一种扫描方式，用了索引，启动速度快，适合大型项目（这种方式目标不做重点分析）
+		if (this.componentsIndex != null && indexSupportsIncludeFilters()) {
 			return addCandidateComponentsFromIndex(this.componentsIndex, basePackage);
 		}
-		else { // 普通扫描方式
+		else { // 普通扫描方式(大多数都是这种情况)
 			return scanCandidateComponents(basePackage);
 		}
 	}
@@ -374,20 +375,27 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		Set<BeanDefinition> candidates = new LinkedHashSet<>();
 		try {
 			Set<String> types = new HashSet<>();
+			// 遍历包含过滤器
 			for (TypeFilter filter : this.includeFilters) {
 				String stereotype = extractStereotype(filter);
 				if (stereotype == null) {
 					throw new IllegalArgumentException("Failed to extract stereotype from " + filter);
 				}
+				// 使用过滤器过滤META-INF/spring.components中的条目
 				types.addAll(index.getCandidateTypes(basePackage, stereotype));
 			}
 			boolean traceEnabled = logger.isTraceEnabled();
 			boolean debugEnabled = logger.isDebugEnabled();
+			/*
+			 * 遍历每种类型，加载对应的class文件资源，再将对应的bean定义封装为ScannedGenericBeanDefinition
+			 */
 			for (String type : types) {
 				MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(type);
+				// 判断是否符合条件（例如必须包含@Component注解）
 				if (isCandidateComponent(metadataReader)) {
 					ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 					sbd.setSource(metadataReader.getResource());
+					// 这个isCandidateComponent是上面哪个的重载方法，要求是具体类或带有@Lookup注解的抽象类
 					if (isCandidateComponent(sbd)) {
 						if (debugEnabled) {
 							logger.debug("Using candidate component class from index: " + type);
@@ -424,7 +432,11 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 			// 解析后的路径形如：net.lzip.ant ----> classpath*:net/lzip/ant/**/*.class
 			String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
 					resolveBasePackage(basePackage) + '/' + this.resourcePattern;
-			// 会根据扫描路径获取到包下所有.class文件，并以resource对象来表示
+			/*
+			 * 会根据扫描路径获取到包下所有.class文件，并以resource对象来表示，
+			 * 这里之所以使用class文件而不是Class对象，是为了提高性能，
+			 * Spring会使用ASM（Java字节码处理框架）来处理class文件而不是靠JVM来加载类对象
+			 */
 			Resource[] resources = getResourcePatternResolver().getResources(packageSearchPath);
 			boolean traceEnabled = logger.isTraceEnabled();
 			boolean debugEnabled = logger.isDebugEnabled();
@@ -444,18 +456,18 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 					 */
 					if (isCandidateComponent(metadataReader)) {
 
-						// 将候选组件转换为beanDefinition
+						// 将候选组件转换为ScannedGenericBeanDefinition（可以联系一下其他情况的bean对应的是哪种beanDefinition）
 						ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 						sbd.setSource(resource);
 						/*
 						 * 再次判断。注意，这里的isCandidateComponent是上面那个的重载方法
-						 * 会处理抽象类和@Lookup注解
+						 * 要求是具体类或抽象类，如果是抽象类则要求带有@Lookup注解
 						 */
 						if (isCandidateComponent(sbd)) {
 							if (debugEnabled) {
 								logger.debug("Identified candidate component class: " + resource);
 							}
-							candidates.add(sbd);
+							candidates.add(sbd); // 符合条件，则添加至candidate集合
 						}
 						else {
 							if (debugEnabled) {
@@ -483,6 +495,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		catch (IOException ex) {
 			throw new BeanDefinitionStoreException("I/O failure during classpath scanning", ex);
 		}
+		// 返回beanDefinition集合
 		return candidates;
 	}
 

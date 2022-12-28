@@ -34,9 +34,12 @@ import org.springframework.lang.Nullable;
 @SuppressWarnings("serial")
 public class BeanFactoryTransactionAttributeSourceAdvisor extends AbstractBeanFactoryPointcutAdvisor {
 
+
+	// 事务属性源对象，用于解析@Transactional注解
 	@Nullable
 	private TransactionAttributeSource transactionAttributeSource;
 
+	// Pointcut对象
 	private final TransactionAttributeSourcePointcut pointcut = new TransactionAttributeSourcePointcut() {
 		@Override
 		@Nullable

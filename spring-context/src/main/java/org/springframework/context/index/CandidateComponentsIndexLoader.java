@@ -91,15 +91,22 @@ public final class CandidateComponentsIndexLoader {
 
 	@Nullable
 	private static CandidateComponentsIndex doLoadIndex(ClassLoader classLoader) {
+		// 是否应该忽略索引
 		if (shouldIgnoreIndex) {
 			return null;
 		}
 
 		try {
+			/*
+			 * 获取所有的META-INF/spring.components文件,
+			 * 这个文件是自动生成的，根据bean上面是否有@Indexed注解，
+			 * 需要引入spring-context-indexer包
+			 */
 			Enumeration<URL> urls = classLoader.getResources(COMPONENTS_RESOURCE_LOCATION);
 			if (!urls.hasMoreElements()) {
-				return null;
+				return null; // 如果为空，则返回null
 			}
+			// 加载所有的META-INF/spring.components文件中的内容
 			List<Properties> result = new ArrayList<>();
 			while (urls.hasMoreElements()) {
 				URL url = urls.nextElement();
@@ -109,7 +116,9 @@ public final class CandidateComponentsIndexLoader {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Loaded " + result.size() + " index(es)");
 			}
+			// 总共配置了多少个component组件
 			int totalCount = result.stream().mapToInt(Properties::size).sum();
+			// 如果配置了components，则封装成CandidateComponentsIndex对象并返回；否则返回null
 			return (totalCount > 0 ? new CandidateComponentsIndex(result) : null);
 		}
 		catch (IOException ex) {

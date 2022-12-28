@@ -73,6 +73,11 @@ import org.springframework.util.Assert;
  */
 public abstract class TransactionSynchronizationManager {
 
+	/**
+	 * 用一个Map保存事务相关的资源，主要保存两种数据：
+	 * 会话工厂和会话：SqlSessionFactory -> SqlSessionHolder
+	 * 数据源和连接：DataSource -> ConnectionHolder
+	 */
 	private static final ThreadLocal<Map<Object, Object>> resources =
 			new NamedThreadLocal<>("Transactional resources");
 
