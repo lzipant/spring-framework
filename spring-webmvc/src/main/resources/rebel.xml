@@ -6,20 +6,13 @@
 -->
 <application generated-by="intellij" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.zeroturnaround.com" xsi:schemaLocation="http://www.zeroturnaround.com http://update.zeroturnaround.com/jrebel/rebel-2_3.xsd">
 
-	<id>spring.spring-lzipant.main</id>
+	<id>spring.spring-webmvc.main</id>
 
 	<classpath>
-		<dir name="/Users/harrisonlee/Documents/projects/spring-framework/spring-lzipant/build/resources/main">
+		<dir name="/Users/harrisonlee/Documents/projects/spring-framework/spring-webmvc/build/classes/java/main">
 		</dir>
-		<dir name="/Users/harrisonlee/Documents/projects/spring-framework/spring-lzipant/build/classes/java/main">
+		<dir name="/Users/harrisonlee/Documents/projects/spring-framework/spring-webmvc/build/resources/main">
 		</dir>
 	</classpath>
-
-	<web>
-		<link target="/">
-			<dir name="/Users/harrisonlee/Documents/projects/spring-framework/spring-lzipant/src/main/webapp">
-			</dir>
-		</link>
-	</web>
 
 </application>

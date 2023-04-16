@@ -28,7 +28,7 @@ dependencies {
     // https://mvnrepository.com/artifact/com.zaxxer/HikariCP
     implementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
     // https://mvnrepository.com/artifact/org.projectlombok/lombok
-    compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.24'
+    compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.26'
 
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.13.3'
     // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind

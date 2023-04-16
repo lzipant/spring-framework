@@ -481,6 +481,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 	}
 
+	/**
+	 * 这里在Spring源码中确实没被用到，而是留给业务进行扩展
+	 * 之所以要预留这个方法来进行add，是因为在这里add的会被优先执行，
+	 * 详情请看{@link PostProcessorRegistrationDelegate#invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory, List)}
+	 *
+	 * 补充一下: Spring Boot中会利用到这个方法
+	 */
 	@Override
 	public void addBeanFactoryPostProcessor(BeanFactoryPostProcessor postProcessor) {
 		Assert.notNull(postProcessor, "BeanFactoryPostProcessor must not be null");

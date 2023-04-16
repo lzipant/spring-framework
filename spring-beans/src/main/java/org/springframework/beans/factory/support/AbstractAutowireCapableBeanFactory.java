@@ -492,7 +492,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			 * 这里特别重要
 			 * 给InstantiationAwareBeanPostProcessor一个机会返回代理对象，以替换原始对象
 			 * AOP和RPC都是基于这种方式来实现的
-			 * ---- 这里是AOP处理的入口 ----
+			 * ---- 这里是AOP处理的入口A，还有入口B（在下面，继续分析），但是一般都是使用的入口B创建代理对象 ----
 			 */
 			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
 			// 如果返回了非空的对象，则直接返回该对象，不再进行后续处理！
@@ -542,9 +542,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			throws BeanCreationException {
 
 		/*
-		 * 该方法内两个重点：
+		 * 该方法内三个重点：
 		 * 一个是 createBeanInstance
-		 * 另一个是 populateBean
+		 * 另一个是 populateBean和initializeBean
 		 *
 		 */
 
@@ -653,10 +653,16 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// 如果允许提前暴露bean，检查循环依赖注入
 		if (earlySingletonExposure) {
-			// 获取提前暴露的引用
+			/*
+			 * ==== 有可能对象被提前进行了AOP增强 ====
+			 * 这里再从缓存中获取一遍，准确说是从二级缓存中获取代理对象
+			 */
 			Object earlySingletonReference = getSingleton(beanName, false);
 			if (earlySingletonReference != null) {
-				// 如果bean没有在初始化的过程中被改变（没有被增强等）
+				/*
+				 * 如果对象没有在初始化后置扩展点进行代理对象的创建，那么把提前创建的代理对象赋值给exposedObject
+				 * 实际上如果提前创建过代理对象，那么在初始化后置扩展点不会再创建代理对象了
+				 */
 				if (exposedObject == bean) {
 					exposedObject = earlySingletonReference;
 				}
@@ -1989,6 +1995,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 		if (mbd == null || !mbd.isSynthetic()) {
 			// 执行后置处理器的后置逻辑，只要某个处理器返回null，那么立即返回
+			/*
+			 * ==== AOP的入口B，一般是在这里创建代理对象 ====
+			 */
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 

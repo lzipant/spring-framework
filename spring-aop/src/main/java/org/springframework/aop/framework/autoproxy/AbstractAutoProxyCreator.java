@@ -234,12 +234,13 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	@Override
 	public Object getEarlyBeanReference(Object bean, String beanName) {
 		Object cacheKey = getCacheKey(bean.getClass(), beanName);
+		// 表示bean对象已经被提前创建过代理对象了
 		this.earlyProxyReferences.put(cacheKey, bean);
 		return wrapIfNecessary(bean, beanName, cacheKey);
 	}
 
 	/*
-	 * 这里是AOP逻辑的入口
+	 * 这里是AOP逻辑的入口A，还有入口B，但是一般情况下都是使用的入口B
 	 * 在IOC refresh过程createBean环节的AbstractAutowireCapableBeanFactory#resolveBeforeInstantiation中会（间接）调用该方法
 	 *
 	 */
@@ -265,6 +266,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		 * TargetSource抽象了被代理对象，TargetSource实例是由TargetSourceCreator实现的，
 		 * 这里调用的方法会遍历所有的TargetSourceCreator
 		 *
+		 * 不过这里一般不用创建代理对象，除非我们的容器中有TargetSourceCreator
 		 */
 		TargetSource targetSource = getCustomTargetSource(beanClass, beanName);
 		if (targetSource != null) {
@@ -342,6 +344,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		if (StringUtils.hasLength(beanName) && this.targetSourcedBeans.contains(beanName)) {
 			return bean;
 		}
+		// 是否不需要创建代理对象或者已经创建过代理对象了
 		if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
 			return bean;
 		}

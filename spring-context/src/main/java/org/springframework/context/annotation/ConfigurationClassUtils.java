@@ -85,6 +85,7 @@ abstract class ConfigurationClassUtils {
 			BeanDefinition beanDef, MetadataReaderFactory metadataReaderFactory) {
 
 		String className = beanDef.getBeanClassName();
+		// 不会处理存在factory-method的情况
 		if (className == null || beanDef.getFactoryMethodName() != null) {
 			return false;
 		}
@@ -123,9 +124,11 @@ abstract class ConfigurationClassUtils {
 
 		// 如果存在@Configuration注解，那么获取注解内的proxyBeanMethods属性，并据此设置配置的模式（full还是lite）
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
+		// 如果存在@Configuration注解，且proxyBeanMethods属性为true，那么是FULL模式
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
+		// 如果没有@Configuration注解，但是类满足几点要求也算是配置类（具体是什么要求点进去看），不过是LITE模式
 		else if (config != null || isConfigurationCandidate(metadata)) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 		}

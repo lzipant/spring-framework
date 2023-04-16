@@ -263,7 +263,7 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 		Connection con = null;
 
 		try {
-			// 如果还没有连接或当前连接没有开启事务
+			// 如果还没有连接或连接处于事务同步状态
 			if (!txObject.hasConnectionHolder() ||
 					txObject.getConnectionHolder().isSynchronizedWithTransaction()) {
 				//创建新的连接

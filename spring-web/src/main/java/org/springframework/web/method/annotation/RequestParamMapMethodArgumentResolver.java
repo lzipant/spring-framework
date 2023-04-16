@@ -74,6 +74,12 @@ public class RequestParamMapMethodArgumentResolver implements HandlerMethodArgum
 
 		ResolvableType resolvableType = ResolvableType.forMethodParameter(parameter);
 
+		/*
+		 * 如果参数类型是MultiValueMap，那么可以分为三种情况
+		 * 如果value的实际类型参数是MultipartFile；
+		 * 如果value的实际类型参数是Part；
+		 * 其他情况
+		 */
 		if (MultiValueMap.class.isAssignableFrom(parameter.getParameterType())) {
 			// MultiValueMap
 			Class<?> valueType = resolvableType.as(MultiValueMap.class).getGeneric(1).resolve();
@@ -106,6 +112,12 @@ public class RequestParamMapMethodArgumentResolver implements HandlerMethodArgum
 		}
 
 		else {
+			/*
+			 * 如果参数类型是MultiValueMap，那么可以分为三种情况
+			 * 如果value的实际类型参数是MultipartFile；
+			 * 如果value的实际类型参数是Part；
+			 * 其他情况
+			 */
 			// Regular Map
 			Class<?> valueType = resolvableType.asMap().getGeneric(1).resolve();
 			if (valueType == MultipartFile.class) {

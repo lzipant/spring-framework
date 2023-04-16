@@ -94,7 +94,7 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 		// Build Advisors for all AspectJ aspects in the bean factory.
 		// 如果AspectJ解析器不为null
 		if (this.aspectJAdvisorsBuilder != null) {
-			// 解析出所有带有@AspectJ注解的bean，添加到advisors集合中一并返回
+			// 解析出所有带有@Aspect注解的bean，添加到advisors集合中一并返回
 			advisors.addAll(this.aspectJAdvisorsBuilder.buildAspectJAdvisors());
 		}
 		return advisors;

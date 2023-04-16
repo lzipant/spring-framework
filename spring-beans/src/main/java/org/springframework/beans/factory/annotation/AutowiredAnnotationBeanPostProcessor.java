@@ -740,7 +740,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					arguments = resolveMethodArguments(method, bean, beanName);
 				}
 			}
-			else { // 否则开始进行解析
+			else { // 没有缓存，则开始进行解析
 				arguments = resolveMethodArguments(method, bean, beanName);
 			}
 			// 如果找到了该方法的参数，则进行属性赋值
