@@ -128,14 +128,16 @@ configure(allprojects) { project ->
 			dependency "org.webjars:webjars-locator-core:0.48"
 			dependency "org.webjars:underscorejs:1.8.3"
 
-			dependencySet(group: 'org.apache.tomcat', version: '9.0.64') {
+			// 源代码中本来是9.0.64，为了方便本地调试，改为9.0.73版本
+			dependencySet(group: 'org.apache.tomcat', version: '9.0.73') {
 				entry 'tomcat-util'
 				entry('tomcat-websocket') {
 					exclude group: "org.apache.tomcat", name: "tomcat-servlet-api"
 					exclude group: "org.apache.tomcat", name: "tomcat-websocket-api"
 				}
 			}
-			dependencySet(group: 'org.apache.tomcat.embed', version: '9.0.64') {
+			// 源代码中本来是9.0.64，为了方便本地调试，改为9.0.73版本
+			dependencySet(group: 'org.apache.tomcat.embed', version: '9.0.73') {
 				entry 'tomcat-embed-core'
 				entry 'tomcat-embed-websocket'
 			}

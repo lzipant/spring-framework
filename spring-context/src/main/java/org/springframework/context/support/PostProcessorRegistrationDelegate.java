@@ -260,6 +260,11 @@ final class PostProcessorRegistrationDelegate {
 		List<String> nonOrderedPostProcessorNames = new ArrayList<>();
 		for (String ppName : postProcessorNames) {
 			if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
+				/*
+				 * 注意，如果postProcessor没被创建，那么在这里会被创建，
+				 * 如AutowiredAnnotationBeanPostProcessor，在AnnotationConfigUtils.registerAnnotationConfigProcessors中注册的是BeanDefinition，
+				 * 而不是直接注入对象实例，Spring这样做，可能是让这些beanPostProcessor也经历完整的生命周期，可以对其进行控制
+				 */
 				BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
 				priorityOrderedPostProcessors.add(pp);
 				if (pp instanceof MergedBeanDefinitionPostProcessor) {

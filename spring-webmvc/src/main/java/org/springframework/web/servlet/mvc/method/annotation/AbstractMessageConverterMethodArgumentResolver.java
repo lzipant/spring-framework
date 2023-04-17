@@ -136,12 +136,13 @@ public abstract class AbstractMessageConverterMethodArgumentResolver implements 
 		MediaType contentType;
 		boolean noContentType = false;
 		try {
+			// 获取请求头中的Content-Type
 			contentType = inputMessage.getHeaders().getContentType();
 		}
 		catch (InvalidMediaTypeException ex) {
 			throw new HttpMediaTypeNotSupportedException(ex.getMessage());
 		}
-		if (contentType == null) {
+		if (contentType == null) { // 请求头中没有Content-Type
 			noContentType = true;
 			contentType = MediaType.APPLICATION_OCTET_STREAM;
 		}
@@ -321,7 +322,7 @@ public abstract class AbstractMessageConverterMethodArgumentResolver implements 
 
 		public EmptyBodyCheckingHttpInputMessage(HttpInputMessage inputMessage) throws IOException {
 			this.headers = inputMessage.getHeaders();
-			InputStream inputStream = inputMessage.getBody();
+			InputStream inputStream = inputMessage.getBody(); // 读请求体
 			if (inputStream.markSupported()) {
 				inputStream.mark(1);
 				this.body = (inputStream.read() != -1 ? inputStream : null);

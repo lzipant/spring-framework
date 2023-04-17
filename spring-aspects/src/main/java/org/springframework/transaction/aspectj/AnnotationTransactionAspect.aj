@@ -45,6 +45,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 public aspect AnnotationTransactionAspect extends AbstractTransactionAspect {
 
+	// 如果报错找不到类则在IDEA插件市场安装AspectJ插件
+
 	public AnnotationTransactionAspect() {
 		super(new AnnotationTransactionAttributeSource(false));
 	}

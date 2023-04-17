@@ -128,8 +128,11 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	protected void addSingleton(String beanName, Object singletonObject) {
 		synchronized (this.singletonObjects) {
+			// 添加到一级缓存中
 			this.singletonObjects.put(beanName, singletonObject);
+			// 从三级缓存中移除
 			this.singletonFactories.remove(beanName);
+			// 从二级缓存中移除
 			this.earlySingletonObjects.remove(beanName);
 			this.registeredSingletons.add(beanName);
 		}
@@ -211,7 +214,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 								 * addSingletonFactory方法（将ObjectFactory添加到三级缓存），
 								 */
 								singletonObject = singletonFactory.getObject();
-								// 加入到二级缓存中
+								// 加入到二级缓存中，为什么不直接加入到一级缓存中呢?
 								this.earlySingletonObjects.put(beanName, singletonObject);
 								// 从三级缓存中移除
 								this.singletonFactories.remove(beanName);

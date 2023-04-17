@@ -231,6 +231,7 @@ public class ServletServerHttpRequest implements ServerHttpRequest {
 
 	private static boolean isFormPost(HttpServletRequest request) {
 		String contentType = request.getContentType();
+		// contentType是application/x-www-form-urlencoded，请求方法是POST
 		return (contentType != null && contentType.contains(FORM_CONTENT_TYPE) &&
 				HttpMethod.POST.matches(request.getMethod()));
 	}

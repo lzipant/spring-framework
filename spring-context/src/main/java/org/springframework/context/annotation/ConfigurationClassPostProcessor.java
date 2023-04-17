@@ -229,8 +229,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			throw new IllegalStateException(
 					"postProcessBeanFactory already called on this post-processor against " + registry);
 		}
+		// 保证不被二次处理
 		this.registriesPostProcessed.add(registryId);
 
+		// 处理配置
 		processConfigBeanDefinitions(registry);
 	}
 
@@ -246,13 +248,15 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					"postProcessBeanFactory already called on this post-processor against " + beanFactory);
 		}
 		this.factoriesPostProcessed.add(factoryId);
+		// 判断是否没被处理过
 		if (!this.registriesPostProcessed.contains(factoryId)) {
 			// BeanDefinitionRegistryPostProcessor hook apparently not supported...
 			// Simply call processConfigurationClasses lazily at this point then.
 			processConfigBeanDefinitions((BeanDefinitionRegistry) beanFactory);
 		}
 
-		enhanceConfigurationClasses(beanFactory); // 加强配置类，重要步骤
+		// CGLIB提升
+		enhanceConfigurationClasses(beanFactory);
 		beanFactory.addBeanPostProcessor(new ImportAwareBeanPostProcessor(beanFactory));
 	}
 
@@ -273,7 +277,8 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			}
 			/*
 			 * 判断beanDef对应的class是否被@Configuration修饰，如果是并判断和设置配置的模式（full还是lite）
-			 * 如果不是被@Configuration修饰，那么再判断是否是其他情况，参考ConfigurationClassUtils#isConfigurationCandidate()方法
+			 * 如果被@Configuration注解修饰，那么proxyTargetClass属性为true的话则是full模式，否则是lite模式
+			 * 如果不是被@Configuration修饰(只能是lite模式)，那么再判断是否是其他情况，参考ConfigurationClassUtils#isConfigurationCandidate()方法
 			 */
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
 				// 如果满足配置类的要求，那么加入到候选者集合中
@@ -326,21 +331,42 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			StartupStep processConfig = this.applicationStartup.start("spring.context.config-classes.parse");
 			/*
 			 * 核心处理逻辑
+			 * 会解析其内部的注解，包括@PropertySource、@ComponentScan、@Import、@ImportResource、@Bean
+			 * 每个被@Configuration修饰的类都会生成一个ConfigurationClass
 			 */
 			parser.parse(candidates);
-			parser.validate(); // 校验配置类
+			/*
+			 * 校验配置类
+			 * 如类不能被final修饰，@Bean标注的方法不能被private修饰
+			 */
+			parser.validate();
 
-			// 拿到所有处理好的配置
+			// 获取所有生成的ConfigurationClass
 			Set<ConfigurationClass> configClasses = new LinkedHashSet<>(parser.getConfigurationClasses());
+			// 移除掉已经被处理过的
 			configClasses.removeAll(alreadyParsed);
 
 			// Read the model and create bean definitions based on its content
+			/*
+			 * 创建ConfigurationClassBeanDefinitionReader对象，用于扫描出ConfigurationClass中的BeanDefinition
+			 */
 			if (this.reader == null) {
 				this.reader = new ConfigurationClassBeanDefinitionReader(
 						registry, this.sourceExtractor, this.resourceLoader, this.environment,
 						this.importBeanNameGenerator, parser.getImportRegistry());
 			}
-			// 加载beanDefinition，比较重要
+			/*
+			 * 加载ConfigurationClass中的beanDefinition并注册，主要有以下来源：
+			 * @Import导入对象，该注解可导入下面四种类：
+			 * 	1、被@Configuration修饰的类；
+			 * 	2、实现了ImportSelector接口的类；
+			 * 	3、实现了ImportBeanDefinitionRegistrar接口的类；
+			 * 	4、其他普通类
+			 * @Configuration修饰的类中被@Bean注解修饰的方法
+			 * @ImportSource注解导入的资源中配置的类
+			 *
+			 *
+			 */
 			this.reader.loadBeanDefinitions(configClasses);
 			alreadyParsed.addAll(configClasses);
 			processConfig.tag("classCount", () -> String.valueOf(configClasses.size())).end();
@@ -357,6 +383,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				for (String candidateName : newCandidateNames) {
 					if (!oldCandidateNames.contains(candidateName)) {
 						BeanDefinition bd = registry.getBeanDefinition(candidateName);
+						// 如果又新加载进来了配置类，且不是之前已经处理过的，那么将其加入到candidates再次循环处理
 						if (ConfigurationClassUtils.checkConfigurationClassCandidate(bd, this.metadataReaderFactory) &&
 								!alreadyParsedClasses.contains(bd.getBeanClassName())) {
 							candidates.add(new BeanDefinitionHolder(bd, candidateName));
@@ -433,6 +460,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				configBeanDefs.put(beanName, (AbstractBeanDefinition) beanDef);
 			}
 		}
+		// 没有需要进行CGLIB提升的配置类，则直接返回
 		if (configBeanDefs.isEmpty() || NativeDetector.inNativeImage()) {
 			// nothing to enhance -> return immediately
 			enhanceConfigClasses.end();
@@ -446,6 +474,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			beanDef.setAttribute(AutoProxyUtils.PRESERVE_TARGET_CLASS_ATTRIBUTE, Boolean.TRUE);
 			// Set enhanced subclass of the user-specified bean class
 			Class<?> configClass = beanDef.getBeanClass();
+			// 通过CGLIB创建一个配置类的子类
 			Class<?> enhancedClass = enhancer.enhance(configClass, this.beanClassLoader);
 			if (configClass != enhancedClass) {
 				if (logger.isTraceEnabled()) {

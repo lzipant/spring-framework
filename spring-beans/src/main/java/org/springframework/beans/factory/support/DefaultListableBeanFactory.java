@@ -1289,13 +1289,17 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		if (Optional.class == descriptor.getDependencyType()) { // 对optional类型的依赖的特殊处理
 			return createOptionalDependency(descriptor, requestingBeanName);
 		}
+		// 对ObjectFactory和ObjectProvider的特殊处理
 		else if (ObjectFactory.class == descriptor.getDependencyType() ||
-				ObjectProvider.class == descriptor.getDependencyType()) { // 对ObjectFactory和ObjectProvider的特殊处理
+				ObjectProvider.class == descriptor.getDependencyType()) {
+			// 需要调用其内部的getObject()方法来获取真实的对象
 			return new DependencyObjectProvider(descriptor, requestingBeanName);
 		}
-		else if (javaxInjectProviderClass == descriptor.getDependencyType()) { // 对javax.inject.Provider的特殊处理
+		// 对javax.inject.Provider的特殊处理
+		else if (javaxInjectProviderClass == descriptor.getDependencyType()) {
 			return new Jsr330Factory().createDependencyProvider(descriptor, requestingBeanName);
 		}
+		// 通用的处理
 		else {
 			// 如果字段被@Lazy修饰，那么说明进行懒加载，Spring不会立即注入实例bean，而是创建代理对象注入
 			Object result = getAutowireCandidateResolver().getLazyResolutionProxyIfNecessary(
@@ -1319,18 +1323,22 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				return shortcut;
 			}
 
+			// 获取依赖的类型
 			Class<?> type = descriptor.getDependencyType();
-			// 处理@Value注解，获取其value属性值
+			// 处理@Value和@Qualifier，获取其value属性值（@Autowired注解没有该属性）
 			Object value = getAutowireCandidateResolver().getSuggestedValue(descriptor);
+			// 如果注解中配置了value信息，则处理该值
 			if (value != null) {
 				if (value instanceof String) {
-					String strVal = resolveEmbeddedValue((String) value); // 解析string
+					// 解析string，因为字符串中可能存在占位符
+					String strVal = resolveEmbeddedValue((String) value);
 					BeanDefinition bd = (beanName != null && containsBean(beanName) ?
 							getMergedBeanDefinition(beanName) : null);
 					value = evaluateBeanDefinitionString(strVal, bd);
 				}
 				TypeConverter converter = (typeConverter != null ? typeConverter : getTypeConverter());
 				try {
+					// 对value进行类型转换并返回
 					return converter.convertIfNecessary(value, type, descriptor.getTypeDescriptor());
 				}
 				catch (UnsupportedOperationException ex) {
@@ -1341,22 +1349,26 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				}
 			}
 
-			/*
-			 * 对数组，集合，Map等类型进行处理
-			 */
+			// 没有在注解中配置value信息
+
+			// 处理符合对象（如数组、集合）
 			Object multipleBeans = resolveMultipleBeans(descriptor, beanName, autowiredBeanNames, typeConverter);
 			if (multipleBeans != null) {
 				return multipleBeans;
 			}
 
 			// findAutowireCandidates方法特别重要，需要重点分析
+			// 返回结果中key -> beanName，value -> bean
 			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, type, descriptor);
 			if (matchingBeans.isEmpty()) {
-				if (isRequired(descriptor)) { // 如果没有找到合适的bean，而且依赖又是required，那么抛出异常吧 eg: expected at last on 1 bean which ...
+				// 如果没有找到合适的bean，而且依赖又是required，那么抛出异常吧 eg: expected at last on 1 bean which ...
+				if (isRequired(descriptor)) {
 					raiseNoMatchingBeanFound(type, descriptor.getResolvableType(), descriptor);
 				}
 				return null;
 			}
+
+			// 待注入的对象不是复合的，而就是单独的一个对象
 
 			String autowiredBeanName;
 			Object instanceCandidate;
@@ -1369,8 +1381,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			 * 可见两种情况的处理时机不一样
 			 */
 			if (matchingBeans.size() > 1) {
+				// 找到最匹配的那个bean
 				autowiredBeanName = determineAutowireCandidate(matchingBeans, descriptor);
+				// 没有找到最匹配的那个bean
 				if (autowiredBeanName == null) {
+					// 既然没找到，又是required或不是复合类型，那么则抛出异常
 					if (isRequired(descriptor) || !indicatesMultipleBeans(type)) {
 						return descriptor.resolveNotUnique(descriptor.getResolvableType(), matchingBeans);
 					}
@@ -1381,6 +1396,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 						return null;
 					}
 				}
+				// 获取到最匹配的bean
 				instanceCandidate = matchingBeans.get(autowiredBeanName);
 			}
 			else {
@@ -1408,6 +1424,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			if (!ClassUtils.isAssignableValue(type, result)) { // 类型不匹配，抛出异常
 				throw new BeanNotOfRequiredTypeException(autowiredBeanName, type, instanceCandidate.getClass());
 			}
+			// 返回依赖注入的bean
 			return result;
 		}
 		finally {
@@ -1562,7 +1579,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	protected Map<String, Object> findAutowireCandidates(
 			@Nullable String beanName, Class<?> requiredType, DependencyDescriptor descriptor) {
 
-		// 获取类型匹配的bean的名称
+		// 从容器中获取类型匹配的bean的名称
 		String[] candidateNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 				this, requiredType, true, descriptor.isEager());
 		Map<String, Object> result = CollectionUtils.newLinkedHashMap(candidateNames.length);
@@ -1599,7 +1616,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				}
 			}
 
-			// 如果结果还是为空，那么允许将自引用添加到结果中
+			// 如果结果还是为空且不是复合类型，那么允许将自引用添加到结果中
 			if (result.isEmpty() && !multiple) {
 				// Consider self references as a final pass...
 				// but in the case of a dependency collection, not the very same bean itself.
@@ -1649,7 +1666,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	@Nullable
 	protected String determineAutowireCandidate(Map<String, Object> candidates, DependencyDescriptor descriptor) {
 		Class<?> requiredType = descriptor.getDependencyType();
-		// 看看有没有bean被标记为@Primary的，如果有，那么返回该bean
+		// 看看有没有bean被标记为@Primary的，如果有，那么返回该bean；找到多个的话会抛出异常
 		String primaryCandidate = determinePrimaryCandidate(candidates, requiredType);
 		if (primaryCandidate != null) {
 			return primaryCandidate;
@@ -1662,14 +1679,21 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			return priorityCandidate;
 		}
 		// Fallback
+		// 兜底
 		for (Map.Entry<String, Object> entry : candidates.entrySet()) {
 			String candidateName = entry.getKey();
 			Object beanInstance = entry.getValue();
+			/*
+			 * 满足下面的条件则直接返回
+			 * * 该Bean是spring内部的可处理bean，如ApplicationContext
+			 * * 名称要匹配
+			 */
 			if ((beanInstance != null && this.resolvableDependencies.containsValue(beanInstance)) ||
 					matchesBeanName(candidateName, descriptor.getDependencyName())) {
 				return candidateName;
 			}
 		}
+		// 一个也没找到，则返回null
 		return null;
 	}
 
